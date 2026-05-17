@@ -105,7 +105,8 @@ def create_app() -> FastAPI:
         photos = scan_album(album_path)
         for photo in photos:
             thumb = get_or_create_thumbnail(Path(str(photo["path"])), album_name)
-            photo["thumb_url"] = f"/thumbnails/{thumb.relative_to(_THUMBNAILS_DIR).as_posix()}"
+            rel = thumb.resolve().relative_to(_THUMBNAILS_DIR).as_posix()
+            photo["thumb_url"] = f"/thumbnails/{rel}"
             h = photo["h_px"]
             photo["aspect"] = (photo["w_px"] / h) if h else 1.0  # type: ignore[operator]
         return photos
