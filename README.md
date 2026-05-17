@@ -14,10 +14,13 @@
 **Fonctionnalités / Features:**
 - 📐 Mise en page automatique (grille, mosaïque, colonnes) / Automatic layout (grid, mosaic, columns)
 - 🔒 Édition manuelle avec verrouillage de position / Manual editing with position lock
+- � Page de couverture avec titre / Cover page with title
+- 🔍 Zoom canvas (40 %–200 %) / Canvas zoom (40%–200%)
 - 💾 Sauvegarde et reprise de session / Save and resume sessions
 - 👁 Prévisualisation en temps réel / Real-time preview
 - 📄 Export PDF haute résolution / High-resolution PDF export
-- 🖼 Formats de page configurables (A4, A3, carré, etc.) / Configurable page formats
+- 📏 Formats de page configurables (A4, A3, carré, Letter, personnalisé) / Configurable page formats
+- 📦 Exécutable autonome Windows (PyInstaller) / Standalone Windows executable (PyInstaller)
 
 ---
 
@@ -31,10 +34,24 @@
 poetry install
 
 # Lancer l'application / Start the application
-poetry run pholio --folder "images/Voyage à Prague"
+poetry run pholio
 
 # Le navigateur s'ouvre automatiquement sur http://localhost:8000
 # The browser opens automatically at http://localhost:8000
+
+# Options / Options
+poetry run pholio --port 8080          # changer le port / change port
+poetry run pholio --host 0.0.0.0       # exposer sur le réseau local / expose on LAN
+```
+
+### Exécutable Windows / Windows Executable
+
+```powershell
+# Générer l'exécutable / Build the executable
+poetry run pholio-build --onefile      # → dist/pholio.exe
+
+# Lancer / Run
+.\dist\pholio.exe
 ```
 
 ---
@@ -55,9 +72,9 @@ poetry run pholio --folder "images/Voyage à Prague"
 ## Stack
 
 - **Backend** : FastAPI + Pillow + fpdf2
-- **Frontend** : HTML/CSS/JS vanilla + Interact.js
+- **Frontend** : HTML/CSS/JS vanilla + Interact.js (vendorisé)
 - **Tests** : pytest + ruff + mypy
-- **Packaging** : Poetry
+- **Packaging** : Poetry + PyInstaller
 
 ---
 

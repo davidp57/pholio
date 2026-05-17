@@ -4,12 +4,12 @@
 
 | Version | Nom | Statut | Description |
 |---|---|---|---|
-| v0.1 | Setup | 🔲 En cours | Project scaffold, poetry, gitflow, TDD infra |
-| v0.2 | Core | 🔲 Planifié | Image scan, thumbnails, session persistence, API skeleton |
-| v0.3 | Layout | 🔲 Planifié | 3 layout algorithms (grid, mosaic, columns), lock mechanism |
-| v0.4 | UI | 🔲 Planifié | Interactive browser UI — drag, resize, lock toggle, re-layout |
-| v0.5 | PDF | 🔲 Planifié | PDF export, multi-format page support |
-| v1.0 | Release | 🔲 Planifié | Stable release, full documentation |
+| v0.1 | Setup | ✅ Livré | Project scaffold, poetry, gitflow, TDD infra |
+| v0.2 | Core | ✅ Livré | Image scan, thumbnails, session persistence, API skeleton |
+| v0.3 | Layout | ✅ Livré | 3 layout algorithms (grid, mosaic, columns), lock mechanism |
+| v0.4 | UI | ✅ Livré | Interactive browser UI — drag, resize, lock toggle, re-layout |
+| v0.5 | PDF | ✅ Livré | PDF export, multi-format page support |
+| v1.0 | Release | ✅ Livré | Stable release, full documentation, exe build, CI |
 
 ---
 
@@ -73,23 +73,26 @@
 
 ---
 
-## v1.0 — Stable Release
+## v1.0 — Stable Release ✅ Livré (2026-05-17)
 
 **Goal**: Production-ready, documented, tested.
 
-- All quality gates green
+- All quality gates green (50 tests, ruff, mypy)
 - User manual (`doc/user/manuel.md`) complete
 - LLM reference (`doc/llm/reference.md`) complete
 - CHANGELOG frozen for v1.0
 - `README.md` updated with final quick-start
+- Standalone Windows executable (PyInstaller)
+- GitHub Actions CI (Python tests, JS check, exe build)
+- Security fixes (path traversal, CDN → local)
 
 ---
 
-## Not yet planned
+## v1.1 — Not yet planned
 
-- Dark mode
+Candidates from the backlog:
+
 - Custom watermark / logo on pages
 - Page title / caption text overlaid on photos
-- Batch export (all albums at once)
+- Photo filmstrip panel (drag-to-reorder)
 - RAW image format support (CR2, NEF, ARW)
-- Photo slideshow / reordering by drag in a filmstrip panel

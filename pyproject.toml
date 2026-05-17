@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pholio"
-version = "0.1.0"
+version = "1.0.0"
 description = "Photo album PDF generator with smart layout — web app locale, moteur de mise en page automatique, export PDF haute résolution."
 authors = ["David"]
 readme = "README.md"

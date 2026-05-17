@@ -58,8 +58,14 @@ tests/
 class PageConfig:
     page_w_mm: float
     page_h_mm: float
-    margin_mm: float      # same on all sides
-    spacing_mm: float     # gap between photos
+    margin_top_mm: float
+    margin_right_mm: float
+    margin_bottom_mm: float
+    margin_left_mm: float
+    spacing_mm: float
+    columns: int
+    target_row_height_mm: float
+    layout_type: str
 ```
 
 ### `PhotoMeta`
@@ -69,7 +75,6 @@ class PhotoMeta:
     id: str               # filename (unique within album)
     w_px: int
     h_px: int
-    aspect: float         # w / h
 ```
 
 ### `PhotoPlacement`
@@ -84,6 +89,26 @@ class PhotoPlacement:
     h_mm: float
     locked: bool
 ```
+
+### `PhotoOverride`
+```python
+@dataclass
+class PhotoOverride:
+    page: int
+    x_mm: float
+    y_mm: float
+    w_mm: float
+    h_mm: float
+```
+
+### `SizeOverride`
+```python
+@dataclass
+class SizeOverride:
+    w_mm: float
+    h_mm: float
+```
+Used to change the rendered size of a photo without locking its position in the layout. The photo still flows with the algorithm; only its dimensions differ from the default.
 
 ### `LayoutResult`
 ```python
@@ -103,7 +128,10 @@ class LayoutResult:
     "layout_type": "mosaic",
     "sort_order": "filename",
     "columns": 3,
-    "margin_mm": 10,
+    "margin_top_mm": 10,
+    "margin_right_mm": 10,
+    "margin_bottom_mm": 10,
+    "margin_left_mm": 10,
     "spacing_mm": 5,
     "target_row_height_mm": 60,
     "relock_behaviour": "keep"
@@ -121,7 +149,14 @@ class LayoutResult:
       "locked": true,
       "override": { "page": 1, "x_mm": 10.0, "y_mm": 10.0, "w_mm": 80.0, "h_mm": 60.0 }
     }
-  ]
+  ],
+  "size_overrides": {
+    "IMG_0097.jpg": { "w_mm": 120.0, "h_mm": 80.0 }
+  },
+  "cover": {
+    "photo_id": "IMG_0097.jpg",
+    "title": "Voyage à Prague"
+  }
 }
 ```
 
@@ -133,9 +168,10 @@ class LayoutResult:
 def run_layout(
     page_cfg: PageConfig,
     photos: list[PhotoMeta],
-    layout_type: str,            # "grid" | "mosaic" | "columns"
     locked_overrides: dict[str, PhotoOverride],
     relock_behaviour: str,       # "keep" | "first" | "unlock"
+    size_overrides: dict[str, SizeOverride] = {},
+    cover_photo_id: str | None = None,
 ) -> LayoutResult
 ```
 
@@ -147,22 +183,46 @@ def run_layout(
 | `"first"` | Locked photos are placed first in the ordering (in their original relative order), then unlocked photos follow. All are re-flowed by the algorithm as if no locks existed. |
 | `"unlock"` | All `override` data is ignored. Full recompute from scratch as if no photo was ever locked. |
 
+### Cover page
+
+If `cover_photo_id` is provided, a full-page placement is prepended at `page=0`. All other photos start at `page=1`. The cover placement has `locked=True` and occupies the full usable area.
+
+### Size overrides
+
+`size_overrides` maps `photo_id → SizeOverride(w_mm, h_mm)`. These affect the rendered dimensions used by the algorithm without locking the photo's position. A photo can have a size override and no position lock, or vice versa.
+
 ---
 
 ## API routes
 
 | Method | Path | Request body | Response |
 |---|---|---|---|
+| `GET` | `/api/version` | — | `{version: str}` |
 | `GET` | `/api/albums` | — | `[{name, path, count}]` |
 | `GET` | `/api/albums/{name}/photos` | — | `[{id, w_px, h_px, aspect, exif_date, thumb_url}]` |
-| `POST` | `/api/layout/compute` | `{config, photos}` | `LayoutResult` JSON |
-| `POST` | `/api/layout/manual-move` | `{album, photo_id, page, x_mm, y_mm, config, photos}` | `LayoutResult` JSON |
-| `POST` | `/api/layout/manual-resize` | `{album, photo_id, w_mm, h_mm, config, photos}` | `LayoutResult` JSON |
-| `POST` | `/api/layout/toggle-lock` | `{photo_id, locked, config, photos}` | `LayoutResult` JSON |
+| `POST` | `/api/layout/compute` | `LayoutRequest` JSON | `{page_count, placements[]}` |
 | `GET` | `/api/session/{album}` | — | Session JSON |
 | `POST` | `/api/session/{album}` | Session JSON | `{ok: true}` |
-| `POST` | `/api/export/pdf` | `{album_path, layout_result, jpeg_quality}` | PDF binary |
-| `GET` | `/thumbnails/{album}/{filename}` | — | WEBP image |
+| `POST` | `/api/export/pdf` | `ExportRequest` JSON | PDF binary |
+| `GET` | `/thumbnails/{path}` | — | WEBP image |
+
+### `LayoutRequest` fields
+```
+page_w_mm, page_h_mm, margin_top_mm, margin_right_mm, margin_bottom_mm, margin_left_mm,
+spacing_mm, columns, target_row_height_mm, layout_type, relock_behaviour,
+photos: [{id, w_px, h_px}],
+locked_overrides: {photo_id: {page, x_mm, y_mm, w_mm, h_mm}},
+size_overrides: {photo_id: {w_mm, h_mm}},
+cover_photo_id: str | null
+```
+
+### `ExportRequest` fields
+```
+album_name: str          # folder name under images/ (NOT a full path)
+page_w_mm, page_h_mm, jpeg_quality, target_dpi,
+layout_result: {page_count, placements[]},
+cover_title: str | null
+```
 
 ---
 
