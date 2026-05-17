@@ -20,6 +20,9 @@ thumbnails/
 sessions/
 images/
 
+# PyInstaller build artifacts
+*.spec
+
 # IDE
 .vscode/settings.json
 .idea/
