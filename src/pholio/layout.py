@@ -230,8 +230,8 @@ def _layout_grid(
                 page=slot_page,
                 x_mm=x,
                 y_mm=y,
-                w_mm=ov_size.w_mm if ov_size else cell_w,
-                h_mm=ov_size.h_mm if ov_size else cell_h,
+                w_mm=min(ov_size.w_mm, cell_w) if ov_size else cell_w,
+                h_mm=min(ov_size.h_mm, cell_h) if ov_size else cell_h,
                 locked=False,
             )
         )
@@ -465,7 +465,7 @@ def _layout_columns(
             y = cfg.margin_top_mm
 
         x = cfg.margin_left_mm + best_col * (col_w + spacing)
-        photo_w = ov_size.w_mm if ov_size else col_w
+        photo_w = min(ov_size.w_mm, col_w) if ov_size else col_w
         placements.append(
             PhotoPlacement(
                 photo_id=photo.id,

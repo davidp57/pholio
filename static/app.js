@@ -1,7 +1,7 @@
 /**
  * Pholio — app.js
  * Main UI logic: album selection, config, canvas rendering, interactions.
- * Interact.js is loaded via CDN in index.html.
+ * Interact.js is vendored locally in static/interact.min.js.
  */
 
 // ---------------------------------------------------------------------------

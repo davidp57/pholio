@@ -121,7 +121,7 @@ Cliquez sur l'icône 🔒 à côté de la photo pour la déverrouiller. Elle rep
 
 ## Sélection multiple
 
-Maintenez **Ctrl** et cliquez sur plusieurs photos dans l'aperçu pour les sélectionner simultanément. Une barre d'outils apparaît en bas du canvas :
+Cliquez sur le bouton ☐ affiché sur chaque photo pour la sélectionner. Cliquez à nouveau (☑) pour la désélectionner. Une barre d'outils apparaît en bas du canvas :
 
 - **Hauteur** : saisir une valeur en mm puis appuyer sur Entrée pour redimensionner toutes les photos sélectionnées à la même hauteur
 
@@ -179,19 +179,6 @@ Pholio corrige automatiquement l'orientation EXIF. Si certaines photos restent m
 
 **Une session ancienne ne se charge pas**  
 Supprimez le fichier `sessions/{nom-album}.json` pour repartir de zéro.
-
-
----
-
-## Interface
-
-L'interface comporte trois zones :
-
-1. **Panneau gauche** — Configuration (album, format de page, type de mise en page, ordre des photos)
-2. **Zone centrale** — Aperçu des pages (canvas interactif)
-3. **Barre d'actions** — Sauvegarder, Exporter PDF
-
----
 
 ## Choisir un album
 

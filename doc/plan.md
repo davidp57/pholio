@@ -56,7 +56,7 @@ photos/                          ← workspace root (contains the images/ folder
 ├── pyproject.toml
 ├── README.md
 ├── CHANGELOG.md
-└── run.py                       ← shortcut: python run.py --folder ...
+├── run.py                       ← shortcut: python run.py
 ```
 
 ---
@@ -72,7 +72,10 @@ photos/                          ← workspace root (contains the images/ folder
     "layout_type": "mosaic",
     "sort_order": "filename",
     "columns": 3,
-    "margin_mm": 10,
+    "margin_top_mm": 10,
+    "margin_right_mm": 10,
+    "margin_bottom_mm": 10,
+    "margin_left_mm": 10,
     "spacing_mm": 5,
     "target_row_height_mm": 60,
     "relock_behaviour": "keep"
@@ -135,7 +138,10 @@ photos/                          ← workspace root (contains the images/ folder
 class PageConfig:
     page_w_mm: float
     page_h_mm: float
-    margin_mm: float
+    margin_top_mm: float
+    margin_right_mm: float
+    margin_bottom_mm: float
+    margin_left_mm: float
     spacing_mm: float
 
 @dataclass
@@ -182,7 +188,7 @@ Adapted from Flickr's justified layout algorithm:
 - Place each photo in the shortest column
 - Locked photos update their column's height accumulator
 
-### `run_layout(config, photos, relock_behaviour) -> LayoutResult`
+### `run_layout(page_cfg, photos, locked_overrides, relock_behaviour, size_overrides, cover_photo_id) -> LayoutResult`
 
 1. Separate locked and unlocked photos
 2. Apply `relock_behaviour` (`keep` / `first` / `unlock`)

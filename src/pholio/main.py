@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pholio.config import IMAGES_DIR, THUMBNAILS_DIR
 from pholio.image_utils import get_or_create_thumbnail, scan_album
@@ -54,8 +54,8 @@ class LayoutRequest(BaseModel):
     layout_type: str = "mosaic"
     relock_behaviour: str = "keep"
     photos: list[dict[str, Any]]
-    locked_overrides: dict[str, dict[str, Any]] = {}
-    size_overrides: dict[str, dict[str, Any]] = {}
+    locked_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    size_overrides: dict[str, dict[str, Any]] = Field(default_factory=dict)
     cover_photo_id: str | None = None
 
 
@@ -70,7 +70,11 @@ class ExportRequest(BaseModel):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Pholio", version="0.1.0")
+    try:
+        _version = _pkg_version("pholio")
+    except PackageNotFoundError:
+        _version = "dev"
+    app = FastAPI(title="Pholio", version=_version)
 
     # --- Version ---
 

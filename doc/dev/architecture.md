@@ -66,9 +66,10 @@ All three algorithms implement the same contract:
 def run_layout(
     page_cfg: PageConfig,
     photos: list[PhotoMeta],
-    layout_type: str,
     locked_overrides: dict[str, PhotoOverride],
-    relock_behaviour: str,
+    relock_behaviour: str = "keep",
+    size_overrides: dict[str, SizeOverride] | None = None,
+    cover_photo_id: str | None = None,
 ) -> LayoutResult
 ```
 

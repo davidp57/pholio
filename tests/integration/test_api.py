@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 from httpx import AsyncClient
 
+from pholio.config import SESSION_SCHEMA_VERSION
+
 
 @pytest.mark.asyncio
 async def test_list_albums_empty(
@@ -38,7 +40,7 @@ async def test_session_roundtrip(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     data = {
-        "version": 1,
+        "version": SESSION_SCHEMA_VERSION,
         "album_path": "images/test",
         "config": {"page_format": "a4-landscape"},
         "photos": [],

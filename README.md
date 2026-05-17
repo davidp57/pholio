@@ -14,7 +14,7 @@
 **Fonctionnalités / Features:**
 - 📐 Mise en page automatique (grille, mosaïque, colonnes) / Automatic layout (grid, mosaic, columns)
 - 🔒 Édition manuelle avec verrouillage de position / Manual editing with position lock
-- � Page de couverture avec titre / Cover page with title
+- 📷 Page de couverture avec titre / Cover page with title
 - 🔍 Zoom canvas (40 %–200 %) / Canvas zoom (40%–200%)
 - 💾 Sauvegarde et reprise de session / Save and resume sessions
 - 👁 Prévisualisation en temps réel / Real-time preview

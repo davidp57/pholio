@@ -32,9 +32,11 @@ def main() -> None:
     import uvicorn
 
     url = f"http://{args.host}:{args.port}"
+    browser_host = "127.0.0.1" if args.host in ("0.0.0.0", "::") else args.host
+    browser_url = f"http://{browser_host}:{args.port}"
     print(f"\n  \U0001f4f8 Pholio  \u2192  {url}")
     print("  Ctrl+C pour quitter\n", flush=True)
-    webbrowser.open(url)
+    webbrowser.open(browser_url)
 
     uvicorn.run(
         "pholio.main:create_app",
