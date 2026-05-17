@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import multiprocessing
 import webbrowser
 from pathlib import Path
 
 
 def main() -> None:
+    # Required for PyInstaller frozen executables on Windows (multiprocessing spawn)
+    multiprocessing.freeze_support()
+
     parser = argparse.ArgumentParser(
         prog="pholio",
         description="Pholio — Photo album PDF generator",
@@ -41,6 +45,8 @@ def main() -> None:
     import uvicorn
 
     url = f"http://{args.host}:{args.port}"
+    print(f"\n  \U0001f4f8 Pholio  \u2192  {url}")
+    print("  Ctrl+C pour quitter\n", flush=True)
     webbrowser.open(url)
 
     uvicorn.run(
@@ -50,3 +56,7 @@ def main() -> None:
         port=args.port,
         reload=False,
     )
+
+
+if __name__ == "__main__":
+    main()

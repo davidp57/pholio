@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
@@ -18,19 +21,32 @@ from pholio.layout import (
     PhotoMeta,
     PhotoOverride,
     PhotoPlacement,
+    SizeOverride,
     run_layout,
 )
 from pholio.pdf_export import generate_pdf
 from pholio.state import load_session, save_session
 
-_STATIC_DIR = Path(__file__).parent.parent.parent / "static"
+
+def _find_static_dir() -> Path:
+    """Locate static/ whether running normally or as a PyInstaller frozen exe."""
+    if getattr(sys, "frozen", False):
+        # PyInstaller: sys._MEIPASS is the extraction/bundle directory
+        return Path(sys._MEIPASS) / "static"  # type: ignore[attr-defined]
+    return Path(__file__).parent.parent.parent / "static"
+
+
+_STATIC_DIR = _find_static_dir()
 _THUMBNAILS_DIR = Path(THUMBNAILS_DIR)
 
 
 class LayoutRequest(BaseModel):
     page_w_mm: float = 297.0
     page_h_mm: float = 210.0
-    margin_mm: float = 10.0
+    margin_top_mm: float = 10.0
+    margin_right_mm: float = 10.0
+    margin_bottom_mm: float = 10.0
+    margin_left_mm: float = 10.0
     spacing_mm: float = 5.0
     columns: int = 3
     target_row_height_mm: float = 60.0
@@ -38,18 +54,32 @@ class LayoutRequest(BaseModel):
     relock_behaviour: str = "keep"
     photos: list[dict[str, Any]]
     locked_overrides: dict[str, dict[str, Any]] = {}
+    size_overrides: dict[str, dict[str, Any]] = {}
+    cover_photo_id: str | None = None
 
 
 class ExportRequest(BaseModel):
     album_path: str
     page_w_mm: float = 297.0
     page_h_mm: float = 210.0
-    jpeg_quality: int = 90
+    jpeg_quality: int = 85
+    target_dpi: int = 150
     layout_result: dict[str, Any]
+    cover_title: str | None = None
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Pholio", version="0.1.0")
+
+    # --- Version ---
+
+    @app.get("/api/version")
+    async def get_version() -> dict[str, str]:
+        try:
+            v = _pkg_version("pholio")
+        except PackageNotFoundError:
+            v = "dev"
+        return {"version": v}
 
     # --- Albums ---
 
@@ -89,7 +119,10 @@ def create_app() -> FastAPI:
         page_cfg = PageConfig(
             page_w_mm=req.page_w_mm,
             page_h_mm=req.page_h_mm,
-            margin_mm=req.margin_mm,
+            margin_top_mm=req.margin_top_mm,
+            margin_right_mm=req.margin_right_mm,
+            margin_bottom_mm=req.margin_bottom_mm,
+            margin_left_mm=req.margin_left_mm,
             spacing_mm=req.spacing_mm,
             columns=req.columns,
             target_row_height_mm=req.target_row_height_mm,
@@ -108,7 +141,18 @@ def create_app() -> FastAPI:
             )
             for k, v in req.locked_overrides.items()
         }
-        result = run_layout(page_cfg, photos, locked, req.relock_behaviour)
+        size_ov = {
+            k: SizeOverride(w_mm=float(v["w_mm"]), h_mm=float(v["h_mm"]))
+            for k, v in req.size_overrides.items()
+        }
+        result = run_layout(
+            page_cfg,
+            photos,
+            locked,
+            req.relock_behaviour,
+            size_overrides=size_ov,
+            cover_photo_id=req.cover_photo_id,
+        )
         return {
             "page_count": result.page_count,
             "placements": [
@@ -162,6 +206,8 @@ def create_app() -> FastAPI:
             page_w_mm=req.page_w_mm,
             page_h_mm=req.page_h_mm,
             jpeg_quality=req.jpeg_quality,
+            target_dpi=req.target_dpi,
+            cover_title=req.cover_title,
         )
         return Response(
             content=pdf_bytes,

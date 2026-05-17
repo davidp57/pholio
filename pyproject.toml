@@ -8,6 +8,7 @@ packages = [{include = "pholio", from = "src"}]
 
 [tool.poetry.scripts]
 pholio = "pholio.cli:main"
+pholio-build = "pholio.build_exe:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"

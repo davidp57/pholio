@@ -11,6 +11,7 @@
 const state = {
   album: null,         // album name
   photos: [],          // [{id, w_px, h_px, aspect, exif_date, thumb_url}]
+  deleted_photos: [],  // photos removed from layout (restorable)
   placements: [],      // [{photo_id, page, x_mm, y_mm, w_mm, h_mm, locked}]
   page_count: 0,
   config: {
@@ -18,13 +19,22 @@ const state = {
     layout_type: 'mosaic',
     sort_order: 'filename',
     columns: 3,
-    margin_mm: 10,
+    margin_top_mm: 10,
+    margin_right_mm: 10,
+    margin_bottom_mm: 10,
+    margin_left_mm: 10,
     spacing_mm: 5,
     target_row_height_mm: 60,
     relock_behaviour: 'keep',
   },
   // Map photo_id -> override {page, x_mm, y_mm, w_mm, h_mm}
   locked_overrides: {},
+  // Map photo_id -> size override {w_mm, h_mm} (no position lock)
+  size_overrides: {},
+  // Currently selected photo IDs (for batch operations)
+  selected_photos: [],
+  // Cover page config
+  cover: { photo_id: null, title: '' },
   // Page dimensions in mm (set from page_format)
   page_w_mm: 297,
   page_h_mm: 210,
@@ -56,20 +66,57 @@ const configPanel    = document.getElementById('config-panel');
 const pageFormatSel  = document.getElementById('page-format');
 const layoutTypeSel  = document.getElementById('layout-type');
 const sortOrderSel   = document.getElementById('sort-order');
-const columnsSel     = document.getElementById('columns');
+const columnsSel       = document.getElementById('columns');
+const marginTopInput   = document.getElementById('margin-top');
+const marginRightInput = document.getElementById('margin-right');
+const marginBottomInput= document.getElementById('margin-bottom');
+const marginLeftInput  = document.getElementById('margin-left');
+const targetRowHeightInput = document.getElementById('target-row-height');
+const targetRowHeightVal   = document.getElementById('target-row-height-val');
 const customFormatDiv= document.getElementById('custom-format');
 const customWInput   = document.getElementById('custom-w');
 const customHInput   = document.getElementById('custom-h');
-const pagesContainer = document.getElementById('pages-container');
-const btnSave        = document.getElementById('btn-save');
-const btnExport      = document.getElementById('btn-export');
-const relockModal    = document.getElementById('relock-modal');
+const pagesContainer    = document.getElementById('pages-container');
+const btnSave           = document.getElementById('btn-save');
+const btnExport         = document.getElementById('btn-export');
+const relockModal       = document.getElementById('relock-modal');
+const sizeDialog        = document.getElementById('size-dialog');
+const sizeWInput        = document.getElementById('size-w');
+const sizeHInput        = document.getElementById('size-h');
+const spinnerEl         = document.getElementById('spinner');
+const spinnerLabelEl    = document.getElementById('spinner-label');
+const placeholderEl     = document.getElementById('canvas-placeholder');
+const trashPanel        = document.getElementById('trash-panel');
+const trashGrid         = document.getElementById('trash-grid');
+const coverSection      = document.getElementById('cover-section');
+const coverPhotoName    = document.getElementById('cover-photo-name');
+const coverRemoveBtn    = document.getElementById('cover-remove-btn');
+const coverTitleInput   = document.getElementById('cover-title-input');
+const selectionToolbar    = document.getElementById('selection-toolbar');
+const selectionCountEl    = document.getElementById('selection-count');
+const selectionSizeSlider = document.getElementById('selection-size-slider');
+const selectionSizeVal    = document.getElementById('selection-size-val');
+const btnClearSelection   = document.getElementById('btn-clear-selection');
+const zoomSlider        = document.getElementById('zoom-slider');
+const zoomLabel         = document.getElementById('zoom-label');
+const btnZoomIn         = document.getElementById('zoom-in');
+const btnZoomOut        = document.getElementById('zoom-out');
+const btnZoomReset      = document.getElementById('zoom-reset');
+
+// Height (mm) reserved at the top of the cover page for the album title
+// Must match COVER_TITLE_H_MM in layout.py
+const COVER_TITLE_H_MM = 20.0;
 
 // ---------------------------------------------------------------------------
 // Initialisation
 // ---------------------------------------------------------------------------
 
 async function init() {
+  api('/api/version').then(data => {
+    const el = document.getElementById('app-version');
+    if (el && data.version) el.textContent = 'v' + data.version;
+  }).catch(() => {});
+
   const albums = await api('/api/albums');
   albums.forEach(a => {
     const opt = document.createElement('option');
@@ -87,7 +134,16 @@ albumSelect.addEventListener('change', async () => {
   const name = albumSelect.value;
   if (!name) return;
   state.album = name;
+  state.deleted_photos = [];
+  state.locked_overrides = {};
+  state.size_overrides = {};
+  state.selected_photos = [];
+  state.cover = { photo_id: null, title: name };
+  updateSelectionToolbar();
+  updateCoverUI();
+  renderTrash();
   configPanel.style.display = '';
+  showSpinner();
 
   // Load saved session
   const session = await api(`/api/session/${encodeURIComponent(name)}`);
@@ -110,16 +166,29 @@ albumSelect.addEventListener('change', async () => {
       state.photos.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
     }
   }
+  if (session.size_overrides) {
+    state.size_overrides = { ...session.size_overrides };
+  }
+  if (session.cover && session.cover.photo_id) {
+    state.cover = { ...session.cover };
+    if (coverTitleInput) coverTitleInput.value = state.cover.title || '';
+    updateCoverUI();
+  }
 
   await computeLayout();
 });
 
-[pageFormatSel, layoutTypeSel, sortOrderSel, columnsSel].forEach(el => {
+[pageFormatSel, layoutTypeSel, sortOrderSel, columnsSel,
+ marginTopInput, marginRightInput, marginBottomInput, marginLeftInput].forEach(el => {
   el.addEventListener('change', async () => {
-    state.config.page_format  = pageFormatSel.value;
-    state.config.layout_type  = layoutTypeSel.value;
-    state.config.sort_order   = sortOrderSel.value;
-    state.config.columns      = parseInt(columnsSel.value, 10);
+    state.config.page_format      = pageFormatSel.value;
+    state.config.layout_type      = layoutTypeSel.value;
+    state.config.sort_order       = sortOrderSel.value;
+    state.config.columns          = parseInt(columnsSel.value, 10);
+    state.config.margin_top_mm    = parseFloat(marginTopInput.value)    || 0;
+    state.config.margin_right_mm  = parseFloat(marginRightInput.value)  || 0;
+    state.config.margin_bottom_mm = parseFloat(marginBottomInput.value) || 0;
+    state.config.margin_left_mm   = parseFloat(marginLeftInput.value)   || 0;
 
     if (Object.keys(state.locked_overrides).length > 0) {
       showRelockModal();
@@ -129,12 +198,65 @@ albumSelect.addEventListener('change', async () => {
   });
 });
 
+targetRowHeightInput.addEventListener('input', () => {
+  const val = parseInt(targetRowHeightInput.value, 10);
+  state.config.target_row_height_mm = val;
+  targetRowHeightVal.textContent = `${val} mm`;
+});
+targetRowHeightInput.addEventListener('change', async () => {
+  await computeLayout();
+});
+
 pageFormatSel.addEventListener('change', () => {
   customFormatDiv.style.display = pageFormatSel.value === 'custom' ? '' : 'none';
 });
 
 btnSave.addEventListener('click', saveSession);
 btnExport.addEventListener('click', exportPdf);
+
+// ---------------------------------------------------------------------------
+// Zoom controls
+// ---------------------------------------------------------------------------
+
+function updateZoomUI() {
+  const pct = Math.round(state.scale / 2.5 * 100);
+  zoomLabel.textContent = `${pct}\u00a0%`;
+  zoomSlider.value = state.scale;
+}
+
+zoomSlider.addEventListener('input', () => {
+  state.scale = parseFloat(zoomSlider.value);
+  updateZoomUI();
+  renderCanvas();
+});
+
+btnZoomIn.addEventListener('click', () => {
+  state.scale = Math.min(5.0, parseFloat((state.scale + 0.25).toFixed(2)));
+  updateZoomUI();
+  renderCanvas();
+});
+
+btnZoomOut.addEventListener('click', () => {
+  state.scale = Math.max(1.0, parseFloat((state.scale - 0.25).toFixed(2)));
+  updateZoomUI();
+  renderCanvas();
+});
+
+btnZoomReset.addEventListener('click', () => {
+  state.scale = 2.5;
+  updateZoomUI();
+  renderCanvas();
+});
+
+// Ctrl+Wheel zoom (on the whole document)
+document.addEventListener('wheel', (e) => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  const delta = e.deltaY < 0 ? 0.25 : -0.25;
+  state.scale = Math.min(5.0, Math.max(1.0, parseFloat((state.scale + delta).toFixed(2))));
+  updateZoomUI();
+  renderCanvas();
+}, { passive: false });
 
 document.querySelectorAll('.modal-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
@@ -156,6 +278,13 @@ function syncConfigUI() {
   layoutTypeSel.value = state.config.layout_type || 'mosaic';
   sortOrderSel.value  = state.config.sort_order  || 'filename';
   columnsSel.value    = state.config.columns      || 3;
+  marginTopInput.value    = state.config.margin_top_mm    ?? 10;
+  marginRightInput.value  = state.config.margin_right_mm  ?? 10;
+  marginBottomInput.value = state.config.margin_bottom_mm ?? 10;
+  marginLeftInput.value   = state.config.margin_left_mm   ?? 10;
+  const trh = state.config.target_row_height_mm ?? 60;
+  targetRowHeightInput.value = trh;
+  targetRowHeightVal.textContent = `${trh} mm`;
 }
 
 function updatePageDimensions() {
@@ -173,6 +302,20 @@ function showRelockModal() {
 }
 
 // ---------------------------------------------------------------------------
+// Spinner helpers
+// ---------------------------------------------------------------------------
+
+function showSpinner(label = 'Calcul de la mise en page…') {
+  if (spinnerLabelEl) spinnerLabelEl.textContent = label;
+  placeholderEl.style.display = 'none';
+  spinnerEl.style.display     = 'flex';
+}
+
+function hideSpinner() {
+  spinnerEl.style.display = 'none';
+}
+
+// ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
 
@@ -187,15 +330,26 @@ async function api(path, options = {}) {
 // ---------------------------------------------------------------------------
 
 async function computeLayout() {
-  if (!state.album || state.photos.length === 0) return;
+  if (!state.album) return;
+  const activePhotos = state.photos.filter(p => !state.deleted_photos.find(d => d.id === p.id));
+  if (activePhotos.length === 0) {
+    state.placements = [];
+    state.page_count = 0;
+    renderCanvas();
+    return;
+  }
   updatePageDimensions();
+  showSpinner();
 
-  const sortedPhotos = sortPhotos(state.photos, state.config.sort_order);
+  const sortedPhotos = sortPhotos(activePhotos, state.config.sort_order);
 
   const body = {
     page_w_mm: state.page_w_mm,
     page_h_mm: state.page_h_mm,
-    margin_mm: state.config.margin_mm,
+    margin_top_mm:    state.config.margin_top_mm,
+    margin_right_mm:  state.config.margin_right_mm,
+    margin_bottom_mm: state.config.margin_bottom_mm,
+    margin_left_mm:   state.config.margin_left_mm,
     spacing_mm: state.config.spacing_mm,
     columns: state.config.columns,
     target_row_height_mm: state.config.target_row_height_mm,
@@ -203,6 +357,8 @@ async function computeLayout() {
     relock_behaviour: state.config.relock_behaviour,
     photos: sortedPhotos.map(p => ({ id: p.id, w_px: p.w_px, h_px: p.h_px })),
     locked_overrides: state.locked_overrides,
+    size_overrides: state.size_overrides,
+    cover_photo_id: state.cover.photo_id,
   };
 
   try {
@@ -217,6 +373,8 @@ async function computeLayout() {
   } catch (err) {
     console.error('Layout error:', err);
     pagesContainer.innerHTML = `<p style="color:red;padding:16px">Erreur de mise en page : ${err.message}</p>`;
+  } finally {
+    hideSpinner();
   }
 }
 
@@ -236,6 +394,7 @@ function sortPhotos(photos, order) {
 // ---------------------------------------------------------------------------
 
 function renderCanvas() {
+  placeholderEl.style.display = 'none';
   pagesContainer.innerHTML = '';
   const sc = state.scale;
   const pw = state.page_w_mm * sc;
@@ -252,11 +411,31 @@ function renderCanvas() {
     pageEl.style.height = `${ph}px`;
     pageEl.dataset.page = i;
 
+    const isCoverPage = (i === 0 && state.cover.photo_id != null);
+    if (isCoverPage) pageEl.classList.add('cover-page');
+
     const pagePlacements = state.placements.filter(p => p.page === i);
     pagePlacements.forEach(pl => {
       const slot = createPhotoSlot(pl, thumbMap[pl.photo_id] || '', sc);
+      if (state.size_overrides[pl.photo_id] && !pl.locked) {
+        slot.classList.add('size-locked');
+      }
+      if (state.selected_photos.includes(pl.photo_id)) {
+        slot.classList.add('selected');
+      }
+      if (pl.photo_id === state.cover.photo_id) {
+        slot.classList.add('cover');
+      }
       pageEl.appendChild(slot);
     });
+
+    if (isCoverPage) {
+      const titleEl = document.createElement('div');
+      titleEl.className = 'cover-title-overlay';
+      titleEl.textContent = state.cover.title || state.album || '';
+      titleEl.style.height = `${COVER_TITLE_H_MM * sc}px`;
+      pageEl.appendChild(titleEl);
+    }
 
     pagesContainer.appendChild(pageEl);
   }
@@ -279,6 +458,62 @@ function createPhotoSlot(placement, thumbUrl, sc) {
   img.alt = placement.photo_id;
   img.draggable = false;
   slot.appendChild(img);
+
+  // Size button — opens dialog when free, removes override when size-locked
+  const isSizeLocked = !!state.size_overrides[placement.photo_id];
+  const sizeBtn = document.createElement('button');
+  sizeBtn.className = 'size-btn';
+  if (isSizeLocked) {
+    sizeBtn.title = 'Libérer la taille forcée';
+    sizeBtn.textContent = '🔒';
+    sizeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetSizeOverride(placement.photo_id);
+    });
+  } else {
+    sizeBtn.title = 'Forcer la taille';
+    sizeBtn.textContent = '⇔';
+    sizeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSizeDialog(placement.photo_id);
+    });
+  }
+  slot.appendChild(sizeBtn);
+
+  // Cover button
+  const coverBtn = document.createElement('button');
+  coverBtn.className = 'cover-btn';
+  const isCover = placement.photo_id === state.cover.photo_id;
+  coverBtn.title = isCover ? 'Retirer la page de garde' : 'D\u00e9finir comme page de garde';
+  coverBtn.textContent = '\ud83d\udcd6';
+  coverBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleCover(placement.photo_id);
+  });
+  slot.appendChild(coverBtn);
+
+  // Select button
+  const selectBtn = document.createElement('button');
+  selectBtn.className = 'select-btn';
+  const isSelected = state.selected_photos.includes(placement.photo_id);
+  selectBtn.title = isSelected ? 'D\u00e9s\u00e9lectionner' : 'S\u00e9lectionner';
+  selectBtn.textContent = isSelected ? '\u2611' : '\u2610';
+  selectBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSelect(placement.photo_id);
+  });
+  slot.appendChild(selectBtn);
+
+  // Delete button
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.title = 'Supprimer de l\'album';
+  deleteBtn.textContent = '✕';
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    deletePhoto(placement.photo_id);
+  });
+  slot.appendChild(deleteBtn);
 
   // Lock button
   const lockBtn = document.createElement('button');
@@ -307,24 +542,38 @@ function attachInteractions() {
   // Unset previous interact configuration to avoid stacking listeners on re-render
   interact('.photo-slot').unset();
 
-  // Drag to move
+  // Drag to move (cross-page capable)
   interact('.photo-slot').draggable({
     listeners: {
+      start(event) {
+        event.target.style.zIndex = '100';
+      },
       end(event) {
         const slot = event.target;
-        const page = parseInt(slot.closest('.page').dataset.page, 10);
-        const pageEl = slot.closest('.page');
-        const rect = pageEl.getBoundingClientRect();
+        slot.style.zIndex = '';
         const slotRect = slot.getBoundingClientRect();
         const sc = state.scale;
-        const x_mm = (slotRect.left - rect.left) / sc;
-        const y_mm = (slotRect.top  - rect.top)  / sc;
-        lockAndMove(slot.dataset.photoId, page, x_mm, y_mm);
+
+        // Detect target page from slot center position
+        const centerX = slotRect.left + slotRect.width  / 2;
+        const centerY = slotRect.top  + slotRect.height / 2;
+        const pages = document.querySelectorAll('.page');
+        let targetPageEl = slot.closest('.page');
+        for (const pageEl of pages) {
+          const pr = pageEl.getBoundingClientRect();
+          if (centerX >= pr.left && centerX <= pr.right &&
+              centerY >= pr.top  && centerY <= pr.bottom) {
+            targetPageEl = pageEl;
+            break;
+          }
+        }
+        const targetPage = parseInt(targetPageEl.dataset.page, 10);
+        const pr = targetPageEl.getBoundingClientRect();
+        const x_mm = (slotRect.left - pr.left) / sc;
+        const y_mm = (slotRect.top  - pr.top)  / sc;
+        lockAndMove(slot.dataset.photoId, targetPage, x_mm, y_mm);
       },
     },
-    modifiers: [
-      interact.modifiers.restrictToParent({ elementRect: { top: 0, left: 0, bottom: 1, right: 1 } }),
-    ],
   }).on('dragmove', (event) => {
     const target = event.target;
     const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
@@ -343,7 +592,7 @@ function attachInteractions() {
         const sc = state.scale;
         const w_mm = event.rect.width  / sc;
         const h_mm = event.rect.height / sc;
-        lockAndResize(slot.dataset.photoId, w_mm, h_mm);
+        setSizeOnly(slot.dataset.photoId, w_mm, h_mm);
       },
     },
   }).on('resizemove', (event) => {
@@ -354,32 +603,84 @@ function attachInteractions() {
 }
 
 // ---------------------------------------------------------------------------
+// Delete / restore actions
+// ---------------------------------------------------------------------------
+
+async function deletePhoto(photoId) {
+  const photo = state.photos.find(p => p.id === photoId);
+  if (!photo) return;
+  state.deleted_photos.push(photo);
+  delete state.locked_overrides[photoId];
+  delete state.size_overrides[photoId];
+  state.selected_photos = state.selected_photos.filter(id => id !== photoId);
+  if (state.cover.photo_id === photoId) {
+    state.cover.photo_id = null;
+    updateCoverUI();
+  }
+  renderTrash();
+  updateSelectionToolbar();
+  await computeLayout();
+}
+
+async function restorePhoto(photoId) {
+  state.deleted_photos = state.deleted_photos.filter(p => p.id !== photoId);
+  renderTrash();
+  await computeLayout();
+}
+
+function renderTrash() {
+  trashGrid.innerHTML = '';
+  if (state.deleted_photos.length === 0) {
+    trashPanel.style.display = 'none';
+    return;
+  }
+  trashPanel.style.display = '';
+  state.deleted_photos.forEach(photo => {
+    const cell = document.createElement('div');
+    cell.className = 'trash-thumb';
+    const img = document.createElement('img');
+    img.src = photo.thumb_url;
+    img.alt = photo.id;
+    const btn = document.createElement('button');
+    btn.className = 'restore-btn';
+    btn.title = 'Restaurer';
+    btn.textContent = '↩';
+    btn.addEventListener('click', () => restorePhoto(photo.id));
+    cell.appendChild(img);
+    cell.appendChild(btn);
+    trashGrid.appendChild(cell);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Lock / unlock actions
 // ---------------------------------------------------------------------------
 
 async function lockAndMove(photoId, page, x_mm, y_mm) {
   const placement = state.placements.find(p => p.photo_id === photoId);
   if (!placement) return;
-  // Reset any residual drag transform on the element before re-render
   const el = document.querySelector(`[data-photo-id="${CSS.escape(photoId)}"]`);
   if (el) { el.style.transform = ''; el.removeAttribute('data-x'); el.removeAttribute('data-y'); }
+  // Merge any existing size override into the position lock
+  const sizeOv = state.size_overrides[photoId];
   state.locked_overrides[photoId] = {
     page, x_mm, y_mm,
-    w_mm: placement.w_mm,
-    h_mm: placement.h_mm,
+    w_mm: sizeOv?.w_mm ?? placement.w_mm,
+    h_mm: sizeOv?.h_mm ?? placement.h_mm,
   };
+  delete state.size_overrides[photoId];
   await computeLayout();
 }
 
-async function lockAndResize(photoId, w_mm, h_mm) {
-  const placement = state.placements.find(p => p.photo_id === photoId);
-  if (!placement) return;
-  state.locked_overrides[photoId] = {
-    page: placement.page,
-    x_mm: placement.x_mm,
-    y_mm: placement.y_mm,
-    w_mm, h_mm,
-  };
+async function setSizeOnly(photoId, w_mm, h_mm) {
+  if (state.locked_overrides[photoId]) {
+    // Photo is position-locked: update size inside the position lock
+    state.locked_overrides[photoId].w_mm = w_mm;
+    state.locked_overrides[photoId].h_mm = h_mm;
+  } else {
+    // Size-only lock: position remains computed by layout
+    state.size_overrides[photoId] = { w_mm, h_mm };
+  }
   await computeLayout();
 }
 
@@ -387,18 +688,166 @@ async function toggleLock(photoId, lock) {
   if (lock) {
     const placement = state.placements.find(p => p.photo_id === photoId);
     if (placement) {
+      const sizeOv = state.size_overrides[photoId];
       state.locked_overrides[photoId] = {
         page: placement.page,
         x_mm: placement.x_mm,
         y_mm: placement.y_mm,
-        w_mm: placement.w_mm,
-        h_mm: placement.h_mm,
+        w_mm: sizeOv?.w_mm ?? placement.w_mm,
+        h_mm: sizeOv?.h_mm ?? placement.h_mm,
       };
+      delete state.size_overrides[photoId];
     }
   } else {
+    const ov = state.locked_overrides[photoId];
+    if (ov) {
+      // Preserve the custom size when unlocking position
+      state.size_overrides[photoId] = { w_mm: ov.w_mm, h_mm: ov.h_mm };
+    }
     delete state.locked_overrides[photoId];
   }
   await computeLayout();
+}
+
+// ---------------------------------------------------------------------------
+// Force size dialog (single photo only)
+// ---------------------------------------------------------------------------
+
+async function resetSizeOverride(photoId) {
+  delete state.size_overrides[photoId];
+  await computeLayout();
+}
+
+function openSizeDialog(photoId) {
+  const placement = state.placements.find(p => p.photo_id === photoId);
+  if (!placement) return;
+  sizeWInput.value = Math.round(placement.w_mm);
+  sizeHInput.value = Math.round(placement.h_mm);
+  sizeDialog.dataset.photoId = photoId;
+  sizeDialog.style.display = 'flex';
+}
+
+document.getElementById('size-dialog-ok').addEventListener('click', async () => {
+  const w = parseFloat(sizeWInput.value);
+  const h = parseFloat(sizeHInput.value);
+  sizeDialog.style.display = 'none';
+  if (!(w > 0 && h > 0)) return;
+  const photoId = sizeDialog.dataset.photoId;
+  if (photoId) await setSizeOnly(photoId, w, h);
+});
+
+document.getElementById('size-dialog-cancel').addEventListener('click', () => {
+  sizeDialog.style.display = 'none';
+});
+
+// ---------------------------------------------------------------------------
+// Cover page actions
+// ---------------------------------------------------------------------------
+
+function toggleCover(photoId) {
+  if (state.cover.photo_id === photoId) {
+    state.cover.photo_id = null;
+  } else {
+    state.cover.photo_id = photoId;
+    if (!state.cover.title && state.album) {
+      state.cover.title = state.album;
+      if (coverTitleInput) coverTitleInput.value = state.cover.title;
+    }
+  }
+  updateCoverUI();
+  computeLayout();
+}
+
+function updateCoverUI() {
+  if (!coverSection) return;
+  if (state.cover.photo_id) {
+    coverSection.style.display = '';
+    if (coverPhotoName) coverPhotoName.textContent = state.cover.photo_id;
+    if (coverRemoveBtn) coverRemoveBtn.style.display = '';
+  } else {
+    coverSection.style.display = 'none';
+    if (coverRemoveBtn) coverRemoveBtn.style.display = 'none';
+  }
+}
+
+if (coverTitleInput) {
+  coverTitleInput.addEventListener('input', () => {
+    state.cover.title = coverTitleInput.value;
+    renderCanvas();
+  });
+}
+
+if (coverRemoveBtn) {
+  coverRemoveBtn.addEventListener('click', () => {
+    state.cover.photo_id = null;
+    updateCoverUI();
+    computeLayout();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Selection actions
+// ---------------------------------------------------------------------------
+
+function toggleSelect(photoId) {
+  const idx = state.selected_photos.indexOf(photoId);
+  if (idx >= 0) {
+    state.selected_photos.splice(idx, 1);
+  } else {
+    state.selected_photos.push(photoId);
+  }
+  updateSelectionToolbar();
+  renderCanvas();
+}
+
+function updateSelectionToolbar() {
+  if (!selectionToolbar) return;
+  if (state.selected_photos.length > 0) {
+    selectionToolbar.style.display = 'flex';
+    if (selectionCountEl) {
+      selectionCountEl.textContent = `${state.selected_photos.length} s\u00e9lectionn\u00e9e(s)`;
+    }
+    // Sync the size slider to the first selected photo's current height
+    if (selectionSizeSlider) {
+      const firstId = state.selected_photos[0];
+      const ov = state.size_overrides[firstId] || state.locked_overrides[firstId];
+      const pl = state.placements.find(p => p.photo_id === firstId);
+      const h = ov ? ov.h_mm : (pl ? pl.h_mm : 60);
+      selectionSizeSlider.value = Math.round(h / 5) * 5;
+      if (selectionSizeVal) selectionSizeVal.textContent = `${selectionSizeSlider.value}\u00a0mm`;
+    }
+  } else {
+    selectionToolbar.style.display = 'none';
+  }
+}
+
+if (selectionSizeSlider) {
+  selectionSizeSlider.addEventListener('input', () => {
+    if (selectionSizeVal) selectionSizeVal.textContent = `${selectionSizeSlider.value}\u00a0mm`;
+  });
+  selectionSizeSlider.addEventListener('change', async () => {
+    const newH = parseFloat(selectionSizeSlider.value);
+    for (const photoId of state.selected_photos) {
+      const pl = state.placements.find(p => p.photo_id === photoId);
+      const aspect = pl ? pl.w_mm / pl.h_mm : 1.0;
+      const newW = newH * aspect;
+      if (state.locked_overrides[photoId]) {
+        state.locked_overrides[photoId].h_mm = newH;
+        state.locked_overrides[photoId].w_mm = newW;
+      } else {
+        state.size_overrides[photoId] = { w_mm: newW, h_mm: newH };
+      }
+    }
+    await computeLayout();
+  });
+}
+
+if (btnClearSelection) {
+  btnClearSelection.addEventListener('click', () => {
+    state.selected_photos = [];
+    updateSelectionToolbar();
+    renderCanvas();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -411,6 +860,8 @@ async function saveSession() {
     version: 1,
     album_path: `images/${state.album}`,
     config: { ...state.config },
+    cover: { ...state.cover },
+    size_overrides: { ...state.size_overrides },
     photos: state.photos.map((p, i) => ({
       id: p.id,
       manual_order: i,
@@ -432,29 +883,38 @@ async function saveSession() {
 
 async function exportPdf() {
   if (!state.album || state.placements.length === 0) return;
-  const body = {
-    album_path: `images/${state.album}`,
-    page_w_mm: state.page_w_mm,
-    page_h_mm: state.page_h_mm,
-    layout_result: {
-      placements: state.placements,
-      page_count: state.page_count,
-    },
-    jpeg_quality: 90,
-  };
-  const res = await fetch('/api/export/pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) { alert('Erreur lors de l\'export PDF.'); return; }
-  const blob = await res.blob();
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `${state.album}.pdf`;
-  a.click();
-  URL.revokeObjectURL(url);
+  showSpinner('Génération du PDF…');
+  try {
+    const body = {
+      album_path: `images/${state.album}`,
+      page_w_mm: state.page_w_mm,
+      page_h_mm: state.page_h_mm,
+      layout_result: {
+        placements: state.placements,
+        page_count: state.page_count,
+      },
+      jpeg_quality: 85,
+      target_dpi: 150,
+      cover_title: state.cover.photo_id
+        ? (state.cover.title || state.album || '')
+        : null,
+    };
+    const res = await fetch('/api/export/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { alert('Erreur lors de l\'export PDF.'); return; }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${state.album}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    hideSpinner();
+  }
 }
 
 // ---------------------------------------------------------------------------

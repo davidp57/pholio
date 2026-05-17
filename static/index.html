@@ -9,7 +9,7 @@
 <body>
   <div id="app">
     <aside id="sidebar">
-      <div class="logo">📸 Pholio</div>
+      <div class="logo">📸 Pholio <span id="app-version" class="app-version"></span></div>
 
       <section class="config-section">
         <h3>Album</h3>
@@ -53,16 +53,85 @@
         <h3>Colonnes</h3>
         <input type="number" id="columns" value="3" min="1" max="10" />
 
+        <h3>Marges (mm)</h3>
+        <div class="margins-grid">
+          <label>↑ Haut    <input type="number" id="margin-top"    value="10" min="0" max="100" /></label>
+          <label>↓ Bas     <input type="number" id="margin-bottom" value="10" min="0" max="100" /></label>
+          <label>← Gauche  <input type="number" id="margin-left"   value="10" min="0" max="100" /></label>
+          <label>→ Droite  <input type="number" id="margin-right"  value="10" min="0" max="100" /></label>
+        </div>
+
+        <h3>Taille des photos</h3>
+        <div class="slider-row">
+          <input type="range" id="target-row-height" min="20" max="150" step="5" value="60" />
+          <span id="target-row-height-val">60 mm</span>
+        </div>
+
+        <div id="cover-section" style="display:none">
+          <h3>Page de garde</h3>
+          <div class="cover-info">
+            <span id="cover-photo-name" title="Photo sélectionnée" class="cover-info-name">—</span>
+            <button id="cover-remove-btn" class="cover-remove-btn" title="Retirer la page de garde" style="display:none">✕</button>
+          </div>
+          <label>Titre
+            <input type="text" id="cover-title-input" placeholder="Titre du livre" />
+          </label>
+        </div>
+
         <div class="button-row">
           <button id="btn-save">💾 Sauvegarder</button>
           <button id="btn-export">📄 Exporter PDF</button>
         </div>
       </section>
+
+      <section class="config-section" id="trash-panel" style="display:none">
+        <h3>🗑️ Corbeille</h3>
+        <div id="trash-grid"></div>
+      </section>
     </aside>
 
+    <nav id="zoom-toolbar" class="zoom-toolbar" aria-label="Zoom">
+      <button id="zoom-in" title="Zoom avant">+</button>
+      <input type="range" id="zoom-slider" min="1.0" max="5.0" step="0.25" value="2.5" />
+      <button id="zoom-out" title="Zoom arrière">−</button>
+      <span id="zoom-label">100&nbsp;%</span>
+      <button id="zoom-reset" title="Réinitialiser le zoom">⊙</button>
+    </nav>
+
     <main id="canvas-area">
+      <div id="canvas-placeholder" class="canvas-placeholder">
+        <div class="canvas-placeholder-icon">📸</div>
+        <p>Choisissez un album pour commencer</p>
+      </div>
+      <div id="spinner" class="spinner-overlay" style="display:none">
+        <div class="spinner-ring"></div>
+        <p id="spinner-label" class="spinner-label">Calcul de la mise en page…</p>
+      </div>
       <div id="pages-container"></div>
+      <div id="selection-toolbar" class="selection-toolbar" style="display:none">
+        <span id="selection-count"></span>
+        <label class="sel-size-label">↔
+          <input type="range" id="selection-size-slider" min="20" max="150" step="5" value="60" />
+          <span id="selection-size-val">60&nbsp;mm</span>
+        </label>
+        <button id="btn-clear-selection">✕ Désélectionner</button>
+      </div>
     </main>
+  </div>
+
+  <!-- Size-force dialog -->
+  <div id="size-dialog" class="modal" style="display:none">
+    <div class="modal-content">
+      <h2>Forcer la taille</h2>
+      <div class="size-inputs">
+        <label>Largeur (mm) <input type="number" id="size-w" min="5" max="800" /></label>
+        <label>Hauteur (mm) <input type="number" id="size-h" min="5" max="800" /></label>
+      </div>
+      <div class="button-row">
+        <button id="size-dialog-ok">✓ Appliquer</button>
+        <button id="size-dialog-cancel">Annuler</button>
+      </div>
+    </div>
   </div>
 
   <!-- Re-layout modal -->
