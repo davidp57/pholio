@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import multiprocessing
 import webbrowser
-from pathlib import Path
 
 
 def main() -> None:
@@ -15,12 +14,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="pholio",
         description="Pholio — Photo album PDF generator",
-    )
-    parser.add_argument(
-        "--folder",
-        type=str,
-        default=None,
-        help="Path to the album folder to open on startup",
     )
     parser.add_argument(
         "--port",
@@ -35,12 +28,6 @@ def main() -> None:
         help="Host to bind to (default: 127.0.0.1)",
     )
     args = parser.parse_args()
-
-    # Validate folder if provided
-    if args.folder:
-        folder_path = Path(args.folder)
-        if not folder_path.exists():
-            parser.error(f"Folder not found: {args.folder}")
 
     import uvicorn
 

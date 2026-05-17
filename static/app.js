@@ -211,6 +211,14 @@ pageFormatSel.addEventListener('change', () => {
   customFormatDiv.style.display = pageFormatSel.value === 'custom' ? '' : 'none';
 });
 
+[customWInput, customHInput].forEach(el => {
+  el.addEventListener('change', async () => {
+    if (state.config.page_format === 'custom') {
+      await computeLayout();
+    }
+  });
+});
+
 btnSave.addEventListener('click', saveSession);
 btnExport.addEventListener('click', exportPdf);
 
@@ -260,12 +268,14 @@ document.addEventListener('wheel', (e) => {
 
 document.querySelectorAll('.modal-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
-    state.config.relock_behaviour = btn.dataset.behaviour;
-    if (btn.dataset.behaviour === 'unlock') {
+    const behaviour = btn.dataset.behaviour;
+    if (behaviour === 'unlock') {
       state.locked_overrides = {};
     }
     relockModal.style.display = 'none';
+    state.config.relock_behaviour = behaviour;
     await computeLayout();
+    state.config.relock_behaviour = 'keep';
   });
 });
 
@@ -886,7 +896,7 @@ async function exportPdf() {
   showSpinner('Génération du PDF…');
   try {
     const body = {
-      album_path: `images/${state.album}`,
+      album_name: state.album,
       page_w_mm: state.page_w_mm,
       page_h_mm: state.page_h_mm,
       layout_result: {

@@ -8,7 +8,7 @@ from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -37,7 +37,8 @@ def _find_static_dir() -> Path:
 
 
 _STATIC_DIR = _find_static_dir()
-_THUMBNAILS_DIR = Path(THUMBNAILS_DIR)
+_THUMBNAILS_DIR = Path(THUMBNAILS_DIR).resolve()
+_IMAGES_DIR = Path(IMAGES_DIR).resolve()
 
 
 class LayoutRequest(BaseModel):
@@ -59,7 +60,7 @@ class LayoutRequest(BaseModel):
 
 
 class ExportRequest(BaseModel):
-    album_path: str
+    album_name: str
     page_w_mm: float = 297.0
     page_h_mm: float = 210.0
     jpeg_quality: int = 85
@@ -109,7 +110,9 @@ def create_app() -> FastAPI:
 
     @app.get("/thumbnails/{rest_of_path:path}")
     async def serve_thumbnail(rest_of_path: str) -> FileResponse:
-        thumb_path = _THUMBNAILS_DIR / rest_of_path
+        thumb_path = (_THUMBNAILS_DIR / rest_of_path).resolve()
+        if not thumb_path.is_relative_to(_THUMBNAILS_DIR):
+            raise HTTPException(status_code=404)
         return FileResponse(str(thumb_path), media_type="image/webp")
 
     # --- Layout ---
@@ -184,6 +187,9 @@ def create_app() -> FastAPI:
 
     @app.post("/api/export/pdf")
     async def export_pdf(req: ExportRequest) -> Response:
+        album_path = (_IMAGES_DIR / req.album_name).resolve()
+        if not album_path.is_relative_to(_IMAGES_DIR):
+            raise HTTPException(status_code=400, detail="Invalid album name")
         placements = [
             PhotoPlacement(
                 photo_id=p["photo_id"],
@@ -202,7 +208,7 @@ def create_app() -> FastAPI:
         )
         pdf_bytes = generate_pdf(
             layout,
-            album_path=Path(req.album_path),
+            album_path=album_path,
             page_w_mm=req.page_w_mm,
             page_h_mm=req.page_h_mm,
             jpeg_quality=req.jpeg_quality,

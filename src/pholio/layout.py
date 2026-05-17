@@ -465,13 +465,14 @@ def _layout_columns(
             y = cfg.margin_top_mm
 
         x = cfg.margin_left_mm + best_col * (col_w + spacing)
+        photo_w = ov_size.w_mm if ov_size else col_w
         placements.append(
             PhotoPlacement(
                 photo_id=photo.id,
                 page=page,
                 x_mm=x,
                 y_mm=y,
-                w_mm=col_w,
+                w_mm=photo_w,
                 h_mm=photo_h,
                 locked=False,
             )

@@ -64,8 +64,11 @@ def generate_pdf(
         pdf.add_page()
 
     # Place images
+    resolved_album = album_path.resolve()
     for placement in layout_result.placements:
-        image_path = album_path / placement.photo_id
+        image_path = (album_path / placement.photo_id).resolve()
+        if not image_path.is_relative_to(resolved_album):
+            continue
         if not image_path.exists():
             continue
 
