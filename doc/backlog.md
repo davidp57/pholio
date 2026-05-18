@@ -41,6 +41,26 @@ Note : Support RAW (CR2, NEF, ARW) non implémenté — nécessite `rawpy`/libra
 
 ---
 
+## Lots planifiés
+
+### Lot POST-1.1 — v1.2 📋 Planifié
+
+Améliorations visuelles, mise en page avancée et interactivité.
+
+| Ticket | Titre | Priorité | Statut | Estimé | Réel |
+|---|---|---|---|---|---|
+| PHO-080 | Couleur de fond des pages (sélecteur, appliqué dans PDF) | P2 | 🔲 À faire | 35 min | — |
+| PHO-081 | Couleur de fond différente sur la page de garde | P3 | 🔲 À faire | 20 min | — |
+| PHO-082 | Placement libre de la photo de garde (sans recadrage forcé) | P2 | 🔲 À faire | 45 min | — |
+| PHO-083 | Icônes filmstrip : lock position, lock taille, choisir comme garde (toujours visibles) | P2 | 🔲 À faire | 40 min | — |
+| PHO-084 | Tri filmstrip synchronisé avec l'ordre défini par l'utilisateur | P2 | 🔲 À faire | 30 min | — |
+| PHO-085 | Synchronisation scroll filmstrip ↔ document | P3 | 🔲 À faire | 25 min | — |
+| PHO-086 | Bloc texte libre (police, couleur, effets, placement drag) | P2 | 🔲 À faire | 90 min | — |
+
+**Total estimé** : 285 min + 15 min gestion = **300 min (5 h)**
+
+---
+
 ## Lots livrés
 
 ### Lot INIT — v1.0 ✅ Livré (2026-05-17)

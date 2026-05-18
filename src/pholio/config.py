@@ -32,6 +32,8 @@ DEFAULTS = {
     "relock_behaviour": "keep",
     "watermark_text": "",
     "target_dpi": 300,
+    "page_bg_color": "#ffffff",
+    "cover_bg_color": "#ffffff",
 }
 
 THUMBNAIL_MAX_SIDE = 400

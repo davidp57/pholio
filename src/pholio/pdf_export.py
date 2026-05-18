@@ -12,17 +12,27 @@ from pholio.layout import LayoutResult
 
 
 class _AlbumPDF(FPDF):
-    """FPDF subclass that renders an optional footer on every page via the
-    official ``footer()`` hook — called automatically by fpdf2 for each page."""
+    """FPDF subclass that renders a background fill (header) and an optional
+    footer watermark on every page via the official fpdf2 hooks."""
 
     def __init__(
         self,
         watermark: str = "",
+        page_bg: tuple[int, int, int] = (255, 255, 255),
+        cover_bg: tuple[int, int, int] | None = None,
         unit: str = "mm",
         format: str | tuple[float, float] = "A4",
     ) -> None:
         super().__init__(unit=unit, format=format)
         self._watermark = watermark
+        self._page_bg = page_bg
+        self._cover_bg = cover_bg  # None → same as page_bg for every page
+
+    def header(self) -> None:
+        bg = self._cover_bg if (self.page == 1 and self._cover_bg is not None) else self._page_bg
+        r, g, b = bg
+        self.set_fill_color(r, g, b)
+        self.rect(0, 0, self.w, self.h, "F")
 
     def footer(self) -> None:
         if not self._watermark:
@@ -35,6 +45,12 @@ class _AlbumPDF(FPDF):
         y = self.h - 6.5
         self.text(x, y, self._watermark)
         self.set_text_color(0, 0, 0)
+
+
+def _hex_to_rgb(color: str) -> tuple[int, int, int]:
+    """Convert a '#rrggbb' hex string to an (r, g, b) integer tuple."""
+    c = color.lstrip("#")
+    return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
 
 
 def _crop_to_aspect(img: Image.Image, target_w_mm: float, target_h_mm: float) -> Image.Image:
@@ -68,6 +84,8 @@ def generate_pdf(
     cover_title: str | None = None,
     watermark_text: str | None = None,
     captions: dict[str, str] | None = None,
+    page_bg_color: str = "#ffffff",
+    cover_bg_color: str | None = None,
 ) -> bytes:
     """Generate a PDF from a LayoutResult.
 
@@ -84,7 +102,13 @@ def generate_pdf(
     Returns:
         PDF file content as bytes.
     """
-    pdf = _AlbumPDF(watermark=watermark_text or "", unit="mm", format=(page_w_mm, page_h_mm))
+    pdf = _AlbumPDF(
+        watermark=watermark_text or "",
+        page_bg=_hex_to_rgb(page_bg_color),
+        cover_bg=_hex_to_rgb(cover_bg_color) if cover_bg_color else None,
+        unit="mm",
+        format=(page_w_mm, page_h_mm),
+    )
     pdf.set_auto_page_break(auto=False)
 
     # Create pages

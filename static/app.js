@@ -28,6 +28,8 @@ const state = {
     relock_behaviour: 'keep',
     watermark_text: '',
     target_dpi: 300,
+    page_bg_color: '#ffffff',
+    cover_bg_color: '#ffffff',
   },
   // Map photo_id -> override {page, x_mm, y_mm, w_mm, h_mm}
   locked_overrides: {},
@@ -108,6 +110,9 @@ const btnZoomOut        = document.getElementById('zoom-out');
 const btnZoomReset      = document.getElementById('zoom-reset');
 const watermarkInput    = document.getElementById('watermark-text');
 const targetDpiSel      = document.getElementById('target-dpi');
+const pageBgColorInput  = document.getElementById('page-bg-color');
+const coverBgColorInput = document.getElementById('cover-bg-color');
+const coverBgLabel      = document.getElementById('cover-bg-label');
 const filmstripEl       = document.getElementById('filmstrip');
 const filmstripDivider  = document.getElementById('filmstrip-divider');
 const captionModal      = document.getElementById('caption-modal');
@@ -250,6 +255,20 @@ if (targetDpiSel) {
   });
 }
 
+if (pageBgColorInput) {
+  pageBgColorInput.addEventListener('input', () => {
+    state.config.page_bg_color = pageBgColorInput.value;
+    renderCanvas();
+  });
+}
+
+if (coverBgColorInput) {
+  coverBgColorInput.addEventListener('input', () => {
+    state.config.cover_bg_color = coverBgColorInput.value;
+    renderCanvas();
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Zoom controls
 // ---------------------------------------------------------------------------
@@ -325,6 +344,8 @@ function syncConfigUI() {
   targetRowHeightVal.textContent = `${trh} mm`;
   if (watermarkInput) watermarkInput.value = state.config.watermark_text || '';
   if (targetDpiSel) targetDpiSel.value = String(state.config.target_dpi ?? 300);
+  if (pageBgColorInput) pageBgColorInput.value = state.config.page_bg_color || '#ffffff';
+  if (coverBgColorInput) coverBgColorInput.value = state.config.cover_bg_color || '#ffffff';
 }
 
 function updatePageDimensions() {
@@ -453,6 +474,7 @@ function renderCanvas() {
 
     const isCoverPage = (i === 0 && state.cover.photo_id != null);
     if (isCoverPage) pageEl.classList.add('cover-page');
+    pageEl.style.backgroundColor = (isCoverPage ? state.config.cover_bg_color : state.config.page_bg_color) || '#ffffff';
 
     const pagePlacements = state.placements.filter(p => p.page === i);
     pagePlacements.forEach(pl => {
@@ -826,9 +848,11 @@ function updateCoverUI() {
     coverSection.style.display = '';
     if (coverPhotoName) coverPhotoName.textContent = state.cover.photo_id;
     if (coverRemoveBtn) coverRemoveBtn.style.display = '';
+    if (coverBgLabel) coverBgLabel.style.display = '';
   } else {
     coverSection.style.display = 'none';
     if (coverRemoveBtn) coverRemoveBtn.style.display = 'none';
+    if (coverBgLabel) coverBgLabel.style.display = 'none';
   }
 }
 
@@ -962,6 +986,8 @@ async function exportPdf() {
         ? (state.cover.title || state.album || '')
         : null,
       watermark_text: state.config.watermark_text || null,
+      page_bg_color: state.config.page_bg_color || '#ffffff',
+      cover_bg_color: state.cover.photo_id ? (state.config.cover_bg_color || '#ffffff') : null,
       captions: { ...state.captions },
     };
     const res = await fetch('/api/export/pdf', {

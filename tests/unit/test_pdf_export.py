@@ -153,3 +153,26 @@ class TestGeneratePdf:
             captions={"ABSENT.jpg": "This photo has no placement"},
         )
         assert pdf_bytes[:4] == b"%PDF"
+
+    def test_page_bg_color_applied(self, tmp_path: Path) -> None:
+        from pholio.pdf_export import generate_pdf
+
+        result = LayoutResult(placements=[], page_count=2)
+        pdf_bytes = generate_pdf(
+            result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, page_bg_color="#1a2b3c"
+        )
+        assert pdf_bytes[:4] == b"%PDF"
+
+    def test_cover_bg_color_different_from_pages(self, tmp_path: Path) -> None:
+        from pholio.pdf_export import generate_pdf
+
+        result = LayoutResult(placements=[], page_count=3)
+        pdf_bytes = generate_pdf(
+            result,
+            tmp_path,
+            page_w_mm=210.0,
+            page_h_mm=297.0,
+            page_bg_color="#ffffff",
+            cover_bg_color="#111111",
+        )
+        assert pdf_bytes[:4] == b"%PDF"

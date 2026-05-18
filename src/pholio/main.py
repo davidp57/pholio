@@ -71,6 +71,8 @@ class ExportRequest(BaseModel):
     cover_title: str | None = None
     watermark_text: str | None = None
     captions: dict[str, str] = Field(default_factory=dict)
+    page_bg_color: str = "#ffffff"
+    cover_bg_color: str | None = None
 
 
 def create_app() -> FastAPI:
@@ -225,6 +227,8 @@ def create_app() -> FastAPI:
             cover_title=req.cover_title,
             watermark_text=req.watermark_text or None,
             captions=req.captions or None,
+            page_bg_color=req.page_bg_color,
+            cover_bg_color=req.cover_bg_color,
         )
         return Response(
             content=pdf_bytes,
