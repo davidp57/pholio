@@ -199,6 +199,21 @@ albumSelect.addEventListener('change', async () => {
     if (coverTitleInput) coverTitleInput.value = state.cover.title || '';
     updateCoverUI();
   }
+  // Restore deleted photos (filter against the freshly loaded photos list)
+  if (Array.isArray(session.deleted_photo_ids) && session.deleted_photo_ids.length > 0) {
+    const deletedSet = new Set(session.deleted_photo_ids);
+    state.deleted_photos = state.photos.filter(p => deletedSet.has(p.id));
+    renderTrash();
+  }
+  // Restore zoom level
+  if (typeof session.scale === 'number') {
+    state.scale = Math.min(5.0, Math.max(1.0, session.scale));
+    updateZoomUI();
+  }
+  // Restore filmstrip width
+  if (filmstripEl && typeof session.filmstrip_width === 'number' && session.filmstrip_width > 0) {
+    filmstripEl.style.width = `${session.filmstrip_width}px`;
+  }
 
   await computeLayout();
 });
@@ -992,6 +1007,9 @@ async function saveSession() {
     size_overrides: { ...state.size_overrides },
     captions: { ...state.captions },
     text_blocks: state.text_blocks.map(b => ({ ...b })),
+    deleted_photo_ids: state.deleted_photos.map(p => p.id),
+    scale: state.scale,
+    filmstrip_width: filmstripEl ? filmstripEl.offsetWidth : null,
     photos: state.photos.map((p, i) => ({
       id: p.id,
       manual_order: i,
