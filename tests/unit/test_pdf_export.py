@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import zlib
 from pathlib import Path
 
 from PIL import Image
@@ -65,6 +66,42 @@ class TestGeneratePdf:
         )
         assert pdf_bytes[:4] == b"%PDF"
         assert len(pdf_bytes) > 0
+
+    def test_watermark_on_every_page(self, tmp_path: Path) -> None:
+        """Watermark text must appear in the content stream of every page."""
+        from pholio.pdf_export import generate_pdf
+
+        wm = "MYMARK"
+        page_count = 3
+        result = LayoutResult(placements=[], page_count=page_count)
+        pdf_bytes = generate_pdf(
+            result, tmp_path, page_w_mm=297.0, page_h_mm=210.0, watermark_text=wm
+        )
+        assert pdf_bytes[:4] == b"%PDF"
+
+        # Decompress all zlib streams and count occurrences of the watermark
+        wm_bytes = wm.encode("latin-1")
+        occurrences = 0
+        i = 0
+        while i < len(pdf_bytes) - 6:
+            if pdf_bytes[i : i + 1] == b"x" and pdf_bytes[i + 1 : i + 2] in (
+                b"\x9c",
+                b"\xda",
+                b"\x01",
+            ):
+                for size in (512, 1024, 2048, 4096, 8192, 16384):
+                    try:
+                        decompressed = zlib.decompress(pdf_bytes[i : i + size])
+                        if wm_bytes in decompressed:
+                            occurrences += 1
+                        break
+                    except zlib.error:
+                        pass
+            i += 1
+
+        assert occurrences >= page_count, (
+            f"Watermark found in {occurrences} stream(s), expected at least {page_count}"
+        )
 
     def test_watermark_empty_string_ignored(self, tmp_path: Path) -> None:
         from pholio.pdf_export import generate_pdf

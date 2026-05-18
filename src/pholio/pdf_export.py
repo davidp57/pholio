@@ -139,14 +139,17 @@ def generate_pdf(
         pdf.cell(page_w_mm, title_h - 4.0, cover_title, align="C")
 
     # Render watermark on every page (bottom-right, light gray italic)
+    # set_font / set_text_color must be re-issued after each pdf.page switch so
+    # fpdf2 emits the correct commands into each page's content stream.
     if watermark_text:
-        pdf.set_font("Helvetica", "I", 9)
-        pdf.set_text_color(170, 170, 170)
-        wm_w = pdf.get_string_width(watermark_text)
-        x = page_w_mm - wm_w - 4
-        y = page_h_mm - 3
         for pg in range(1, layout_result.page_count + 1):
             pdf.page = pg
+            pdf.set_font("Helvetica", "I", 9)
+            pdf.set_text_color(170, 170, 170)
+            wm_w = pdf.get_string_width(watermark_text)
+            x = page_w_mm - wm_w - 4
+            # y = top of text line; font is ~3.2 mm tall, keep 3 mm clearance
+            y = page_h_mm - 6.5
             pdf.text(x, y, watermark_text)
         pdf.set_text_color(0, 0, 0)
 
