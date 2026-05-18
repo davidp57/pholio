@@ -40,6 +40,8 @@ def generate_pdf(
     jpeg_quality: int = 85,
     target_dpi: int = 150,
     cover_title: str | None = None,
+    watermark_text: str | None = None,
+    captions: dict[str, str] | None = None,
 ) -> bytes:
     """Generate a PDF from a LayoutResult.
 
@@ -104,6 +106,25 @@ def generate_pdf(
             h=placement.h_mm,
         )
 
+        # Render caption overlay if present
+        if captions:
+            caption_text = captions.get(placement.photo_id, "")
+            if caption_text:
+                _cap_h = 6.5
+                pdf.set_fill_color(20, 20, 20)
+                pdf.rect(
+                    placement.x_mm,
+                    placement.y_mm + placement.h_mm - _cap_h,
+                    placement.w_mm,
+                    _cap_h,
+                    "F",
+                )
+                pdf.set_font("Helvetica", "", 7)
+                pdf.set_text_color(240, 240, 240)
+                pdf.set_xy(placement.x_mm, placement.y_mm + placement.h_mm - _cap_h)
+                pdf.cell(placement.w_mm, _cap_h, caption_text, align="C")
+                pdf.set_text_color(0, 0, 0)
+
     # Render cover title on page 1 (first page), at the top
     if cover_title and layout_result.page_count > 0:
         from pholio.layout import COVER_TITLE_H_MM
@@ -116,5 +137,15 @@ def generate_pdf(
         pdf.set_text_color(255, 255, 255)
         pdf.set_xy(0.0, 2.0)
         pdf.cell(page_w_mm, title_h - 4.0, cover_title, align="C")
+
+    # Render watermark on every page (bottom-right, light gray italic)
+    if watermark_text:
+        pdf.set_font("Helvetica", "I", 9)
+        pdf.set_text_color(170, 170, 170)
+        for pg in range(1, layout_result.page_count + 1):
+            pdf.page = pg
+            pdf.set_xy(0, page_h_mm - 7)
+            pdf.cell(page_w_mm - 4, 7, watermark_text, align="R")
+        pdf.set_text_color(0, 0, 0)
 
     return bytes(pdf.output())

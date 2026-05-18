@@ -693,3 +693,114 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/* ---- Filmstrip ---- */
+.filmstrip {
+  position: sticky;
+  bottom: 0;
+  align-self: stretch;
+  background: rgba(22, 33, 62, 0.97);
+  border-top: 1px solid var(--accent);
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  z-index: 25;
+  flex-shrink: 0;
+  min-height: 74px;
+}
+
+.filmstrip-item {
+  flex-shrink: 0;
+  width: 56px;
+  cursor: grab;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.15s, opacity 0.15s;
+  user-select: none;
+}
+
+.filmstrip-item img {
+  width: 56px;
+  height: 42px;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.filmstrip-item.drag-over {
+  border-color: var(--highlight);
+  opacity: 0.85;
+}
+
+.filmstrip-item.dragging { opacity: 0.35; }
+
+.filmstrip-caption-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  background: var(--highlight);
+  border-radius: 50%;
+}
+
+/* ---- Caption overlay on photo slot ---- */
+.caption-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+  padding: 3px 6px;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Caption button on photo slot ---- */
+.photo-slot .caption-btn {
+  position: absolute;
+  bottom: 28px;
+  left: 4px;
+  background: rgba(0,0,0,0.55);
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  z-index: 20;
+  line-height: 1;
+}
+
+.photo-slot:hover .caption-btn { display: flex; }
+.photo-slot.has-caption .caption-btn { display: flex; background: rgba(0,100,60,0.8); }
+
+/* ---- Caption modal input ---- */
+.caption-modal-input {
+  width: 100%;
+  background: var(--accent);
+  color: var(--text);
+  border: 1px solid #2a4080;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 14px;
+}

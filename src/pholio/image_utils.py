@@ -9,7 +9,17 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from pholio.config import THUMBNAIL_MAX_SIDE, THUMBNAIL_QUALITY, THUMBNAILS_DIR
 
+try:
+    from pillow_heif import register_heif_opener as _register_heif
+
+    _register_heif()
+    _HEIF_AVAILABLE = True
+except ImportError:
+    _HEIF_AVAILABLE = False
+
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".tiff", ".tif", ".bmp"}
+if _HEIF_AVAILABLE:
+    SUPPORTED_EXTENSIONS |= {".heic", ".heif"}
 
 
 def slugify(text: str) -> str:

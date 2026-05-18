@@ -6,6 +6,17 @@ Versionnage : [Semantic Versioning](https://semver.org/)
 
 ---
 
+## [Non publié]
+
+### Ajouté
+
+- **Filigrane** (PHO-070) : texte de filigrane configurable rendu en bas à droite de chaque page du PDF (champ « Filigrane » dans la barre latérale)
+- **Légendes** (PHO-071) : bouton ✏️ sur chaque photo pour saisir une légende ; affichée en superposition dans le canvas et rendue comme bande sombre en bas de la photo dans le PDF ; persistée dans la session
+- **Panneau filmstrip** (PHO-072) : bande horizontale en bas du canvas affichant toutes les photos actives ; drag & drop pour réorganiser l'ordre ; bascule automatique en mode « Manuel »
+- **Support HEIC/HEIF** (PHO-073) : ouverture des fichiers `.heic` et `.heif` via `pillow-heif` lorsque la bibliothèque est installée
+
+---
+
 ## [1.0.1] — 2026-05-18
 
 ### Corrigé

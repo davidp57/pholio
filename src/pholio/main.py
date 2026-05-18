@@ -67,6 +67,8 @@ class ExportRequest(BaseModel):
     target_dpi: int = 150
     layout_result: dict[str, Any]
     cover_title: str | None = None
+    watermark_text: str | None = None
+    captions: dict[str, str] = Field(default_factory=dict)
 
 
 def create_app() -> FastAPI:
@@ -219,6 +221,8 @@ def create_app() -> FastAPI:
             jpeg_quality=req.jpeg_quality,
             target_dpi=req.target_dpi,
             cover_title=req.cover_title,
+            watermark_text=req.watermark_text or None,
+            captions=req.captions or None,
         )
         return Response(
             content=pdf_bytes,

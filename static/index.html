@@ -78,6 +78,11 @@
           </label>
         </div>
 
+        <h3>Filigrane</h3>
+        <label>Texte
+          <input type="text" id="watermark-text" placeholder="© Mon Album 2025" />
+        </label>
+
         <div class="button-row">
           <button id="btn-save">💾 Sauvegarder</button>
           <button id="btn-export">📄 Exporter PDF</button>
@@ -116,6 +121,7 @@
         </label>
         <button id="btn-clear-selection">✕ Désélectionner</button>
       </div>
+      <div id="filmstrip" class="filmstrip" style="display:none"></div>
     </main>
   </div>
 
@@ -142,6 +148,19 @@
       <button class="modal-btn" data-behaviour="keep">Conserver les photos verrouillées à leur place</button>
       <button class="modal-btn" data-behaviour="first">Remettre les photos verrouillées en premier</button>
       <button class="modal-btn" data-behaviour="unlock">Déverrouiller toutes les photos et recalculer</button>
+    </div>
+  </div>
+
+  <!-- Caption edit modal -->
+  <div id="caption-modal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h2>Légende</h2>
+      <p>Modifier la légende de cette photo</p>
+      <input type="text" id="caption-text-input" class="caption-modal-input" placeholder="Légende de la photo…" maxlength="200" />
+      <div class="button-row">
+        <button id="caption-modal-ok">✓ Appliquer</button>
+        <button id="caption-modal-cancel">Annuler</button>
+      </div>
     </div>
   </div>
 

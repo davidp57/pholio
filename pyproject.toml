@@ -17,6 +17,7 @@ uvicorn = {extras = ["standard"], version = ">=0.30"}
 pillow = ">=10.0"
 fpdf2 = ">=2.7"
 python-multipart = ">=0.0.9"
+pillow-heif = ">=0.18"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"
