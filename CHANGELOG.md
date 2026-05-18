@@ -8,13 +8,18 @@ Versionnage : [Semantic Versioning](https://semver.org/)
 
 ## [Non publié]
 
+---
+
+## [1.1.0] — 2026-05-18
+
 ### Ajouté
 
-- **Filigrane** (PHO-070) : texte de filigrane configurable rendu en bas à droite de chaque page du PDF (champ « Filigrane » dans la barre latérale)
+- **Bas de page** (PHO-070) : texte de bas de page configurable rendu en bas à droite de chaque page du PDF (champ « Bas de page » dans la barre latérale) ; aperçu en temps réel dans le canvas
 - **Légendes** (PHO-071) : bouton ✏️ sur chaque photo pour saisir une légende ; affichée en superposition dans le canvas et rendue comme bande sombre en bas de la photo dans le PDF ; persistée dans la session
-- **Panneau filmstrip** (PHO-072) : bande horizontale en bas du canvas affichant toutes les photos actives ; drag & drop pour réorganiser l'ordre ; bascule automatique en mode « Manuel »
+- **Panneau filmstrip** (PHO-072) : panneau vertical redimensionnable sur la droite du canvas affichant toutes les photos actives ; drag & drop pour réorganiser l'ordre ; bouton de suppression par photo ; bascule automatique en mode « Manuel »
 - **Support HEIC/HEIF** (PHO-073) : ouverture des fichiers `.heic` et `.heif` via `pillow-heif` lorsque la bibliothèque est installée
-- **Résolution PDF** : sélecteur DPI dans la barre latérale (72 / 100 / **150** / 200 / 300) ; valeur persistée en session
+- **Résolution PDF** : sélecteur DPI dans la barre latérale (72 / 100 / 150 / 200 / **300**) ; valeur par défaut 300 dpi ; persistée en session
+- **Export couverture JPG** : option pour exporter la photo de couverture en JPG en même temps que le PDF (avec correction d'orientation EXIF)
 
 ---
 
