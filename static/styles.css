@@ -112,6 +112,12 @@ body {
 .button-row button:active { opacity: 0.7; }
 
 /* ---- Canvas area ---- */
+#main-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
 #canvas-area {
   flex: 1;
   overflow: auto;
@@ -694,27 +700,40 @@ body {
   justify-content: center;
 }
 
+/* ---- Filmstrip divider ---- */
+.filmstrip-divider {
+  width: 6px;
+  cursor: col-resize;
+  background: var(--accent);
+  border-left: 1px solid #2a4080;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.filmstrip-divider:hover,
+.filmstrip-divider.dragging {
+  background: var(--highlight);
+}
+
 /* ---- Filmstrip ---- */
 .filmstrip {
-  position: sticky;
-  bottom: 0;
-  align-self: stretch;
+  width: 130px;
+  min-width: 60px;
   background: rgba(22, 33, 62, 0.97);
-  border-top: 1px solid var(--accent);
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  border-left: 1px solid var(--accent);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
   z-index: 25;
   flex-shrink: 0;
-  min-height: 74px;
 }
 
 .filmstrip-item {
   flex-shrink: 0;
-  width: 56px;
+  width: 100%;
   cursor: grab;
   border-radius: 4px;
   border: 2px solid transparent;
@@ -725,8 +744,8 @@ body {
 }
 
 .filmstrip-item img {
-  width: 56px;
-  height: 42px;
+  width: 100%;
+  height: 80px;
   object-fit: cover;
   display: block;
   pointer-events: none;
@@ -749,7 +768,41 @@ body {
   border-radius: 50%;
 }
 
-/* ---- Caption overlay on photo slot ---- */
+/* ---- Filmstrip delete button ---- */
+.filmstrip-delete-btn {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: rgba(180,0,0,0.75);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  z-index: 10;
+  line-height: 1;
+}
+
+.filmstrip-item:hover .filmstrip-delete-btn { display: flex; }
+
+/* ---- Watermark overlay on page (preview) ---- */
+.watermark-overlay {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  color: rgba(150, 150, 150, 0.55);
+  font-size: 10px;
+  font-style: italic;
+  pointer-events: none;
+  z-index: 4;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
 .caption-overlay {
   position: absolute;
   bottom: 0;

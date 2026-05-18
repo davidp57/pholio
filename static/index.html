@@ -87,9 +87,9 @@
         <select id="target-dpi">
           <option value="72">72 dpi — écran</option>
           <option value="100">100 dpi</option>
-          <option value="150" selected>150 dpi — normal</option>
+          <option value="150">150 dpi — normal</option>
           <option value="200">200 dpi</option>
-          <option value="300">300 dpi — impression</option>
+          <option value="300" selected>300 dpi — impression</option>
         </select>
 
         <div class="button-row">
@@ -112,26 +112,29 @@
       <button id="zoom-reset" title="Réinitialiser le zoom">⊙</button>
     </nav>
 
-    <main id="canvas-area">
-      <div id="canvas-placeholder" class="canvas-placeholder">
-        <div class="canvas-placeholder-icon">📸</div>
-        <p>Choisissez un album pour commencer</p>
-      </div>
-      <div id="spinner" class="spinner-overlay" style="display:none">
-        <div class="spinner-ring"></div>
-        <p id="spinner-label" class="spinner-label">Calcul de la mise en page…</p>
-      </div>
-      <div id="pages-container"></div>
-      <div id="selection-toolbar" class="selection-toolbar" style="display:none">
-        <span id="selection-count"></span>
-        <label class="sel-size-label">↔
-          <input type="range" id="selection-size-slider" min="20" max="150" step="5" value="60" />
-          <span id="selection-size-val">60&nbsp;mm</span>
-        </label>
-        <button id="btn-clear-selection">✕ Désélectionner</button>
-      </div>
+    <div id="main-area">
+      <main id="canvas-area">
+        <div id="canvas-placeholder" class="canvas-placeholder">
+          <div class="canvas-placeholder-icon">📸</div>
+          <p>Choisissez un album pour commencer</p>
+        </div>
+        <div id="spinner" class="spinner-overlay" style="display:none">
+          <div class="spinner-ring"></div>
+          <p id="spinner-label" class="spinner-label">Calcul de la mise en page…</p>
+        </div>
+        <div id="pages-container"></div>
+        <div id="selection-toolbar" class="selection-toolbar" style="display:none">
+          <span id="selection-count"></span>
+          <label class="sel-size-label">↔
+            <input type="range" id="selection-size-slider" min="20" max="150" step="5" value="60" />
+            <span id="selection-size-val">60&nbsp;mm</span>
+          </label>
+          <button id="btn-clear-selection">✕ Désélectionner</button>
+        </div>
+      </main>
+      <div id="filmstrip-divider" class="filmstrip-divider" style="display:none"></div>
       <div id="filmstrip" class="filmstrip" style="display:none"></div>
-    </main>
+    </div>
   </div>
 
   <!-- Size-force dialog -->

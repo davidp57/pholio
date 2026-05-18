@@ -27,7 +27,7 @@ const state = {
     target_row_height_mm: 60,
     relock_behaviour: 'keep',
     watermark_text: '',
-    target_dpi: 150,
+    target_dpi: 300,
   },
   // Map photo_id -> override {page, x_mm, y_mm, w_mm, h_mm}
   locked_overrides: {},
@@ -109,6 +109,7 @@ const btnZoomReset      = document.getElementById('zoom-reset');
 const watermarkInput    = document.getElementById('watermark-text');
 const targetDpiSel      = document.getElementById('target-dpi');
 const filmstripEl       = document.getElementById('filmstrip');
+const filmstripDivider  = document.getElementById('filmstrip-divider');
 const captionModal      = document.getElementById('caption-modal');
 const captionTextInput  = document.getElementById('caption-text-input');
 
@@ -238,6 +239,7 @@ btnExport.addEventListener('click', exportPdf);
 if (watermarkInput) {
   watermarkInput.addEventListener('input', () => {
     state.config.watermark_text = watermarkInput.value;
+    updateWatermarkOverlays();
   });
 }
 
@@ -321,7 +323,7 @@ function syncConfigUI() {
   targetRowHeightInput.value = trh;
   targetRowHeightVal.textContent = `${trh} mm`;
   if (watermarkInput) watermarkInput.value = state.config.watermark_text || '';
-  if (targetDpiSel) targetDpiSel.value = String(state.config.target_dpi ?? 150);
+  if (targetDpiSel) targetDpiSel.value = String(state.config.target_dpi ?? 300);
 }
 
 function updatePageDimensions() {
@@ -477,6 +479,7 @@ function renderCanvas() {
     pagesContainer.appendChild(pageEl);
   }
 
+  updateWatermarkOverlays();
   renderFilmstrip();
   attachInteractions();
 }
@@ -953,7 +956,7 @@ async function exportPdf() {
         page_count: state.page_count,
       },
       jpeg_quality: 85,
-      target_dpi: state.config.target_dpi ?? 150,
+      target_dpi: state.config.target_dpi ?? 300,
       cover_title: state.cover.photo_id
         ? (state.cover.title || state.album || '')
         : null,
@@ -1015,20 +1018,50 @@ if (captionModal) {
 }
 
 // ---------------------------------------------------------------------------
+// Watermark overlay (preview)
+// ---------------------------------------------------------------------------
+
+function updateWatermarkOverlays() {
+  const text = state.config.watermark_text;
+  document.querySelectorAll('.page').forEach(pageEl => {
+    let el = pageEl.querySelector('.watermark-overlay');
+    if (!text) {
+      if (el) el.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'watermark-overlay';
+      pageEl.appendChild(el);
+    }
+    el.textContent = text;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Filmstrip (PHO-072)
 // ---------------------------------------------------------------------------
 
 function renderFilmstrip() {
   if (!filmstripEl) return;
-  if (!state.album) { filmstripEl.style.display = 'none'; return; }
+  if (!state.album) {
+    filmstripEl.style.display = 'none';
+    if (filmstripDivider) filmstripDivider.style.display = 'none';
+    return;
+  }
 
   const activePhotos = state.photos.filter(
     p => !state.deleted_photos.find(d => d.id === p.id)
   );
-  if (activePhotos.length === 0) { filmstripEl.style.display = 'none'; return; }
+  if (activePhotos.length === 0) {
+    filmstripEl.style.display = 'none';
+    if (filmstripDivider) filmstripDivider.style.display = 'none';
+    return;
+  }
 
   const displayOrder = sortPhotos(activePhotos, state.config.sort_order);
   filmstripEl.style.display = 'flex';
+  if (filmstripDivider) filmstripDivider.style.display = '';
   filmstripEl.innerHTML = '';
 
   displayOrder.forEach((photo, idx) => {
@@ -1043,6 +1076,18 @@ function renderFilmstrip() {
     img.src = photo.thumb_url;
     img.alt = photo.id;
     item.appendChild(img);
+
+    // Delete button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'filmstrip-delete-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Supprimer de la mise en page';
+    delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      await deletePhoto(photo.id);
+    });
+    item.appendChild(delBtn);
 
     if (state.captions[photo.id]) {
       const dot = document.createElement('div');
@@ -1096,6 +1141,35 @@ function renderFilmstrip() {
     filmstripEl.appendChild(item);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Filmstrip divider resize
+// ---------------------------------------------------------------------------
+
+(function initDividerResize() {
+  if (!filmstripDivider || !filmstripEl) return;
+  let startX, startW;
+  filmstripDivider.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    startW = filmstripEl.offsetWidth;
+    filmstripDivider.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (startX === undefined) return;
+    const delta = startX - e.clientX;
+    const newW = Math.max(60, Math.min(400, startW + delta));
+    filmstripEl.style.width = `${newW}px`;
+  });
+  document.addEventListener('mouseup', () => {
+    if (startX === undefined) return;
+    startX = undefined;
+    filmstripDivider.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+}());
 
 // ---------------------------------------------------------------------------
 // Start
