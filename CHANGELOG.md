@@ -10,6 +10,29 @@ Versionnage : [Semantic Versioning](https://semver.org/)
 
 ---
 
+## [1.2.0] — 2026-05-18
+
+### Ajouté
+
+- **Couleur de fond des pages** (PHO-080) : sélecteur de couleur dans la barre latérale ; appliquée en fond à chaque page dans le PDF
+- **Couleur de fond de la page de garde** (PHO-081) : couleur distincte optionnelle pour la page de garde, indépendante des autres pages
+- **Photo de garde sans recadrage** (PHO-082) : mode « contain » pour la photo de garde — la photo est redimensionnée pour tenir entière dans la page sans être rognée, centrée avec des bandes de fond
+- **Icônes filmstrip améliorées** (PHO-083) : icônes toujours visibles sur chaque vignette du filmstrip — verrouillage de position, verrouillage de taille, définir comme page de garde
+- **Synchronisation ordre filmstrip** (PHO-084) : l'ordre des vignettes dans le filmstrip reflète l'ordre défini manuellement par l'utilisateur
+- **Synchronisation scroll filmstrip ↔ document** (PHO-085) : le filmstrip défile automatiquement pour suivre la position dans le document, et vice-versa
+- **Blocs texte libres** (PHO-086) : ajout de blocs texte repositionnables par drag & drop sur n'importe quelle page (police, taille, couleur, alignement L/C/R) ; persistés en session
+
+### Améliorations techniques
+
+- Validation Pydantic stricte sur les couleurs hexadécimales et l'alignement des blocs texte
+- `_hex_to_rgb` : fallback `(0, 0, 0)` en cas de valeur invalide
+- Mode contain de la photo de garde limité à la page 0
+- Optimisation : `querySelectorAll` sorti de la boucle de rendu
+- Throttle du scroll par `requestAnimationFrame`
+- Attributs `aria-label` sur les boutons du filmstrip
+
+---
+
 ## [1.1.0] — 2026-05-18
 
 ### Ajouté
