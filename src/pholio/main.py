@@ -61,6 +61,21 @@ class LayoutRequest(BaseModel):
     cover_photo_id: str | None = None
 
 
+class TextBlock(BaseModel):
+    id: str
+    page: int
+    x_mm: float
+    y_mm: float
+    w_mm: float
+    h_mm: float
+    text: str = ""
+    font_size: float = 24.0
+    font_color: str = "#000000"
+    align: str = "C"
+    bold: bool = False
+    italic: bool = False
+
+
 class ExportRequest(BaseModel):
     album_name: str
     page_w_mm: float = 297.0
@@ -73,6 +88,8 @@ class ExportRequest(BaseModel):
     captions: dict[str, str] = Field(default_factory=dict)
     page_bg_color: str = "#ffffff"
     cover_bg_color: str | None = None
+    cover_photo_id: str | None = None
+    text_blocks: list[TextBlock] = Field(default_factory=list)
 
 
 def create_app() -> FastAPI:
@@ -229,6 +246,8 @@ def create_app() -> FastAPI:
             captions=req.captions or None,
             page_bg_color=req.page_bg_color,
             cover_bg_color=req.cover_bg_color,
+            cover_photo_id=req.cover_photo_id,
+            text_blocks=[b.model_dump() for b in req.text_blocks] if req.text_blocks else None,
         )
         return Response(
             content=pdf_bytes,

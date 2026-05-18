@@ -37,6 +37,8 @@ const state = {
   size_overrides: {},
   // Map photo_id -> caption text string
   captions: {},
+  // Free text blocks [{id, page, x_mm, y_mm, w_mm, h_mm, text, font_size, font_color, align, bold, italic}]
+  text_blocks: [],
   // Currently selected photo IDs (for batch operations)
   selected_photos: [],
   // Cover page config
@@ -188,6 +190,9 @@ albumSelect.addEventListener('change', async () => {
   }
   if (session.captions) {
     state.captions = { ...session.captions };
+  }
+  if (Array.isArray(session.text_blocks)) {
+    state.text_blocks = session.text_blocks.map(b => ({ ...b }));
   }
   if (session.cover && session.cover.photo_id) {
     state.cover = { ...session.cover };
@@ -502,6 +507,14 @@ function renderCanvas() {
     pagesContainer.appendChild(pageEl);
   }
 
+  // Render text blocks
+  state.text_blocks.forEach(block => {
+    const pages = pagesContainer.querySelectorAll('.page');
+    const pageEl = pages[block.page];
+    if (!pageEl) return;
+    pageEl.appendChild(createTextBlockEl(block, sc));
+  });
+
   updateWatermarkOverlays();
   renderFilmstrip();
   attachInteractions();
@@ -683,6 +696,35 @@ function attachInteractions() {
     const target = event.target;
     target.style.width  = `${event.rect.width}px`;
     target.style.height = `${event.rect.height}px`;
+  });
+
+  // Text blocks: drag and resize
+  interact('.text-block').unset();
+  interact('.text-block').draggable({
+    listeners: {
+      move(event) {
+        const blockId = event.target.dataset.blockId;
+        const block = state.text_blocks.find(b => b.id === blockId);
+        if (!block) return;
+        block.x_mm += event.dx / state.scale;
+        block.y_mm += event.dy / state.scale;
+        event.target.style.left = `${block.x_mm * state.scale}px`;
+        event.target.style.top  = `${block.y_mm * state.scale}px`;
+      },
+    },
+  }).resizable({
+    edges: { right: true, bottom: true, bottomRight: '.tb-resize-handle' },
+    listeners: {
+      move(event) {
+        const blockId = event.target.dataset.blockId;
+        const block = state.text_blocks.find(b => b.id === blockId);
+        if (!block) return;
+        block.w_mm = event.rect.width  / state.scale;
+        block.h_mm = event.rect.height / state.scale;
+        event.target.style.width  = `${event.rect.width}px`;
+        event.target.style.height = `${event.rect.height}px`;
+      },
+    },
   });
 }
 
@@ -949,6 +991,7 @@ async function saveSession() {
     cover: { ...state.cover },
     size_overrides: { ...state.size_overrides },
     captions: { ...state.captions },
+    text_blocks: state.text_blocks.map(b => ({ ...b })),
     photos: state.photos.map((p, i) => ({
       id: p.id,
       manual_order: i,
@@ -988,6 +1031,8 @@ async function exportPdf() {
       watermark_text: state.config.watermark_text || null,
       page_bg_color: state.config.page_bg_color || '#ffffff',
       cover_bg_color: state.cover.photo_id ? (state.config.cover_bg_color || '#ffffff') : null,
+      cover_photo_id: state.cover.photo_id || null,
+      text_blocks: state.text_blocks || [],
       captions: { ...state.captions },
     };
     const res = await fetch('/api/export/pdf', {
@@ -1059,6 +1104,126 @@ if (captionModal) {
 
   document.getElementById('caption-modal-cancel').addEventListener('click', () => {
     captionModal.style.display = 'none';
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Text blocks (PHO-086)
+// ---------------------------------------------------------------------------
+
+function createTextBlockEl(block, sc) {
+  const el = document.createElement('div');
+  el.className = 'text-block';
+  el.dataset.blockId = block.id;
+  el.style.left   = `${block.x_mm * sc}px`;
+  el.style.top    = `${block.y_mm * sc}px`;
+  el.style.width  = `${block.w_mm * sc}px`;
+  el.style.height = `${block.h_mm * sc}px`;
+
+  const content = document.createElement('div');
+  content.className = 'text-block-content';
+  content.textContent = block.text || '';
+  content.style.fontSize  = `${(block.font_size || 24) * sc * 0.352778}px`;
+  content.style.color     = block.font_color || '#000000';
+  content.style.fontWeight = block.bold   ? 'bold'   : 'normal';
+  content.style.fontStyle  = block.italic ? 'italic' : 'normal';
+  content.style.textAlign  = ({ L: 'left', C: 'center', R: 'right' })[block.align] || 'center';
+  el.appendChild(content);
+
+  const handle = document.createElement('div');
+  handle.className = 'tb-resize-handle';
+  el.appendChild(handle);
+
+  el.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    openTextBlockModal(block.id);
+  });
+
+  return el;
+}
+
+const textBlockModal   = document.getElementById('text-block-modal');
+const tbTextArea       = document.getElementById('tb-text');
+const tbFontSize       = document.getElementById('tb-font-size');
+const tbFontColor      = document.getElementById('tb-font-color');
+const tbAlign          = document.getElementById('tb-align');
+const tbBold           = document.getElementById('tb-bold');
+const tbItalic         = document.getElementById('tb-italic');
+const tbModalOk        = document.getElementById('tb-modal-ok');
+const tbModalDelete    = document.getElementById('tb-modal-delete');
+const tbModalCancel    = document.getElementById('tb-modal-cancel');
+const btnAddText       = document.getElementById('btn-add-text');
+
+function openTextBlockModal(blockId) {
+  const block = state.text_blocks.find(b => b.id === blockId);
+  if (!block || !textBlockModal) return;
+  textBlockModal.dataset.blockId = blockId;
+  tbTextArea.value   = block.text || '';
+  tbFontSize.value   = block.font_size || 24;
+  tbFontColor.value  = block.font_color || '#000000';
+  tbAlign.value      = block.align || 'C';
+  tbBold.checked     = !!block.bold;
+  tbItalic.checked   = !!block.italic;
+  textBlockModal.style.display = 'flex';
+  tbTextArea.focus();
+}
+
+if (tbModalOk) {
+  tbModalOk.addEventListener('click', () => {
+    const blockId = textBlockModal.dataset.blockId;
+    const block = state.text_blocks.find(b => b.id === blockId);
+    if (block) {
+      block.text       = tbTextArea.value;
+      block.font_size  = parseFloat(tbFontSize.value) || 24;
+      block.font_color = tbFontColor.value;
+      block.align      = tbAlign.value;
+      block.bold       = tbBold.checked;
+      block.italic     = tbItalic.checked;
+    }
+    textBlockModal.style.display = 'none';
+    renderCanvas();
+  });
+}
+
+if (tbModalDelete) {
+  tbModalDelete.addEventListener('click', () => {
+    const blockId = textBlockModal.dataset.blockId;
+    state.text_blocks = state.text_blocks.filter(b => b.id !== blockId);
+    textBlockModal.style.display = 'none';
+    renderCanvas();
+  });
+}
+
+if (tbModalCancel) {
+  tbModalCancel.addEventListener('click', () => {
+    textBlockModal.style.display = 'none';
+  });
+}
+
+if (btnAddText) {
+  btnAddText.addEventListener('click', () => {
+    if (!state.album) return;
+    // Find the first page visible in the viewport
+    let targetPage = 0;
+    const mainArea = document.getElementById('main-area');
+    const pages = pagesContainer.querySelectorAll('.page');
+    if (mainArea && pages.length > 0) {
+      const containerRect = mainArea.getBoundingClientRect();
+      for (let i = 0; i < pages.length; i++) {
+        const r = pages[i].getBoundingClientRect();
+        if (r.bottom > containerRect.top + 60) { targetPage = i; break; }
+      }
+    }
+    const block = {
+      id: `tb_${Date.now()}`,
+      page: targetPage,
+      x_mm: 20, y_mm: 20, w_mm: 120, h_mm: 30,
+      text: 'Titre', font_size: 24, font_color: '#000000',
+      align: 'C', bold: false, italic: false,
+    };
+    state.text_blocks.push(block);
+    renderCanvas();
+    openTextBlockModal(block.id);
   });
 }
 
@@ -1140,9 +1305,87 @@ function renderFilmstrip() {
       item.appendChild(dot);
     }
 
+    // PHO-083: always-visible action bar
+    const actions = document.createElement('div');
+    actions.className = 'filmstrip-actions';
+
+    // Lock position button
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'filmstrip-action-btn' + (state.locked_overrides[photo.id] ? ' active' : '');
+    lockBtn.title = 'Verrouiller la position';
+    lockBtn.textContent = '🔒';
+    lockBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const pl = state.placements.find(p => p.photo_id === photo.id);
+      if (state.locked_overrides[photo.id]) {
+        delete state.locked_overrides[photo.id];
+        if (pl) pl.locked = false;
+        await computeLayout();
+      } else if (pl) {
+        await lockAndMove(photo.id, pl.page, pl.x_mm, pl.y_mm);
+      }
+    });
+    actions.appendChild(lockBtn);
+
+    // Lock size button
+    const sizeBtn = document.createElement('button');
+    sizeBtn.className = 'filmstrip-action-btn' + (state.size_overrides[photo.id] ? ' active' : '');
+    sizeBtn.title = 'Verrouiller la taille';
+    sizeBtn.textContent = '⇔';
+    sizeBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (state.size_overrides[photo.id]) {
+        await resetSizeOverride(photo.id);
+      } else {
+        const pl = state.placements.find(p => p.photo_id === photo.id);
+        if (pl) await setSizeOnly(photo.id, pl.w_mm, pl.h_mm);
+      }
+    });
+    actions.appendChild(sizeBtn);
+
+    // Set as cover button
+    const coverBtn = document.createElement('button');
+    const isCover = state.cover.photo_id === photo.id;
+    coverBtn.className = 'filmstrip-action-btn' + (isCover ? ' is-cover' : '');
+    coverBtn.title = isCover ? 'Retirer de la couverture' : 'Définir comme couverture';
+    coverBtn.textContent = '⭐';
+    coverBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (state.cover.photo_id === photo.id) {
+        state.cover.photo_id = null;
+        state.cover.title = '';
+        if (coverTitleInput) coverTitleInput.value = '';
+      } else {
+        state.cover.photo_id = photo.id;
+      }
+      updateCoverUI();
+      await computeLayout();
+    });
+    actions.appendChild(coverBtn);
+
+    item.appendChild(actions);
+
+    // PHO-084: page badge
+    const placement = state.placements.find(p => p.photo_id === photo.id);
+    if (placement !== undefined) {
+      const badge = document.createElement('div');
+      badge.className = 'filmstrip-page-badge';
+      badge.textContent = `P${placement.page + 1}`;
+      item.appendChild(badge);
+    }
+
     item.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', String(idx));
       item.classList.add('dragging');
+    });
+
+    // PHO-085: click filmstrip item → scroll canvas to photo
+    item.addEventListener('click', () => {
+      const pl = state.placements.find(p => p.photo_id === photo.id);
+      if (pl == null) return;
+      const pages = pagesContainer.querySelectorAll('.page');
+      const pageEl = pages[pl.page];
+      if (pageEl) pageEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
     item.addEventListener('dragend', () => {
@@ -1214,6 +1457,34 @@ function renderFilmstrip() {
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   });
+}());
+
+// PHO-085: scroll canvas → highlight filmstrip items
+(function initScrollSync() {
+  const mainArea = document.getElementById('main-area');
+  if (!mainArea) return;
+  mainArea.addEventListener('scroll', () => {
+    if (!filmstripEl) return;
+    const rect = mainArea.getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
+    let closestPage = 0;
+    let closestDist = Infinity;
+    pagesContainer.querySelectorAll('.page').forEach((pageEl, idx) => {
+      const pr = pageEl.getBoundingClientRect();
+      const dist = Math.abs(pr.top + pr.height / 2 - centerY);
+      if (dist < closestDist) { closestDist = dist; closestPage = idx; }
+    });
+    const photosOnPage = new Set(
+      state.placements.filter(p => p.page === closestPage).map(p => p.photo_id)
+    );
+    filmstripEl.querySelectorAll('.filmstrip-item').forEach(item => {
+      if (photosOnPage.has(item.dataset.photoId)) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }, { passive: true });
 }());
 
 // ---------------------------------------------------------------------------

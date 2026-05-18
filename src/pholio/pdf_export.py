@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
+from typing import Any
 
 from fpdf import FPDF
 from PIL import Image, ImageOps
@@ -74,6 +75,25 @@ def _crop_to_aspect(img: Image.Image, target_w_mm: float, target_h_mm: float) ->
         return img.crop((0, top, src_w, top + new_h))
 
 
+def _contain_in_slot(
+    img: Image.Image, slot_w_mm: float, slot_h_mm: float
+) -> tuple[float, float, float, float]:
+    """Compute the image rect (x_offset, y_offset, img_w, img_h) to contain the image
+    inside the slot without cropping (object-fit: contain, centred)."""
+    src_w, src_h = img.size
+    img_aspect = src_w / src_h
+    slot_aspect = slot_w_mm / slot_h_mm
+    if img_aspect > slot_aspect:
+        img_w_mm = slot_w_mm
+        img_h_mm = slot_w_mm / img_aspect
+    else:
+        img_h_mm = slot_h_mm
+        img_w_mm = slot_h_mm * img_aspect
+    x_offset = (slot_w_mm - img_w_mm) / 2
+    y_offset = (slot_h_mm - img_h_mm) / 2
+    return x_offset, y_offset, img_w_mm, img_h_mm
+
+
 def generate_pdf(
     layout_result: LayoutResult,
     album_path: Path,
@@ -86,6 +106,8 @@ def generate_pdf(
     captions: dict[str, str] | None = None,
     page_bg_color: str = "#ffffff",
     cover_bg_color: str | None = None,
+    cover_photo_id: str | None = None,
+    text_blocks: list[dict[str, Any]] | None = None,
 ) -> bytes:
     """Generate a PDF from a LayoutResult.
 
@@ -133,28 +155,43 @@ def generate_pdf(
             rgb: Image.Image = (
                 oriented.convert("RGB") if oriented.mode not in ("RGB", "L") else oriented
             )
-            # Crop to target aspect ratio (matches browser object-fit: cover)
-            cropped = _crop_to_aspect(rgb, placement.w_mm, placement.h_mm)
-            # Downscale to target DPI — never upscale
-            src_w, src_h = cropped.size
-            if src_w > target_w_px or src_h > target_h_px:
-                resized = cropped.resize((target_w_px, target_h_px), Image.Resampling.LANCZOS)
+
+            if placement.photo_id == cover_photo_id:
+                # Contain mode: no crop, centred in slot
+                x_off, y_off, img_w_mm, img_h_mm = _contain_in_slot(
+                    rgb, placement.w_mm, placement.h_mm
+                )
+                tw = max(1, int(round(img_w_mm / 25.4 * target_dpi)))
+                th = max(1, int(round(img_h_mm / 25.4 * target_dpi)))
+                src_w, src_h = rgb.size
+                if src_w > tw or src_h > th:
+                    to_place = rgb.resize((tw, th), Image.Resampling.LANCZOS)
+                else:
+                    to_place = rgb
+                place_x = placement.x_mm + x_off
+                place_y = placement.y_mm + y_off
+                place_w = img_w_mm
+                place_h = img_h_mm
             else:
-                resized = cropped
+                # Cover (crop) mode: default behaviour
+                cropped = _crop_to_aspect(rgb, placement.w_mm, placement.h_mm)
+                src_w, src_h = cropped.size
+                if src_w > target_w_px or src_h > target_h_px:
+                    to_place = cropped.resize((target_w_px, target_h_px), Image.Resampling.LANCZOS)
+                else:
+                    to_place = cropped
+                place_x = placement.x_mm
+                place_y = placement.y_mm
+                place_w = placement.w_mm
+                place_h = placement.h_mm
 
             buf = io.BytesIO()
-            resized.save(buf, format="JPEG", quality=jpeg_quality, optimize=True)
+            to_place.save(buf, format="JPEG", quality=jpeg_quality, optimize=True)
             buf.seek(0)
 
         # fpdf2 pages are 1-indexed
         pdf.page = placement.page + 1
-        pdf.image(
-            buf,
-            x=placement.x_mm,
-            y=placement.y_mm,
-            w=placement.w_mm,
-            h=placement.h_mm,
-        )
+        pdf.image(buf, x=place_x, y=place_y, w=place_w, h=place_h)
 
         # Render caption overlay if present
         if captions:
@@ -187,5 +224,31 @@ def generate_pdf(
         pdf.set_text_color(255, 255, 255)
         pdf.set_xy(0.0, 2.0)
         pdf.cell(page_w_mm, title_h - 4.0, cover_title, align="C")
+
+    # Render text blocks
+    for block in text_blocks or []:
+        pg = int(block.get("page", 0)) + 1
+        if pg < 1 or pg > layout_result.page_count:
+            continue
+        pdf.page = pg
+        style = ""
+        if block.get("bold"):
+            style += "B"
+        if block.get("italic"):
+            style += "I"
+        font_size = float(block.get("font_size", 24))
+        pdf.set_font("Helvetica", style, font_size)
+        r, g, b = _hex_to_rgb(str(block.get("font_color", "#000000")))
+        pdf.set_text_color(r, g, b)
+        line_h = font_size * 0.352778 * 1.2  # pt → mm with 1.2 line spacing
+        pdf.set_xy(float(block["x_mm"]), float(block["y_mm"]))
+        pdf.multi_cell(
+            float(block["w_mm"]),
+            line_h,
+            str(block.get("text", "")),
+            align=str(block.get("align", "C")),
+            border=0,
+        )
+        pdf.set_text_color(0, 0, 0)
 
     return bytes(pdf.output())

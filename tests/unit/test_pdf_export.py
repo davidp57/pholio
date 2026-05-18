@@ -176,3 +176,56 @@ class TestGeneratePdf:
             cover_bg_color="#111111",
         )
         assert pdf_bytes[:4] == b"%PDF"
+
+    def test_cover_photo_id_contain_no_crop(self, tmp_path: Path) -> None:
+        from pholio.pdf_export import generate_pdf
+
+        img = Image.new("RGB", (600, 400), color=(80, 120, 160))
+        img.save(tmp_path / "COVER.jpg", format="JPEG")
+        placement = PhotoPlacement(
+            photo_id="COVER.jpg", page=0, x_mm=0.0, y_mm=0.0, w_mm=210.0, h_mm=297.0
+        )
+        result = LayoutResult(placements=[placement], page_count=1)
+        pdf_bytes = generate_pdf(
+            result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, cover_photo_id="COVER.jpg"
+        )
+        assert pdf_bytes[:4] == b"%PDF"
+
+    def test_text_blocks_in_pdf(self, tmp_path: Path) -> None:
+        from pholio.pdf_export import generate_pdf
+
+        result = LayoutResult(placements=[], page_count=2)
+        blocks = [
+            {
+                "id": "tb1",
+                "page": 0,
+                "x_mm": 20.0,
+                "y_mm": 20.0,
+                "w_mm": 100.0,
+                "h_mm": 30.0,
+                "text": "Titre de l'album",
+                "font_size": 24.0,
+                "font_color": "#1a1a1a",
+                "align": "C",
+                "bold": True,
+                "italic": False,
+            },
+            {
+                "id": "tb2",
+                "page": 1,
+                "x_mm": 10.0,
+                "y_mm": 10.0,
+                "w_mm": 80.0,
+                "h_mm": 20.0,
+                "text": "Description",
+                "font_size": 12.0,
+                "font_color": "#444444",
+                "align": "L",
+                "bold": False,
+                "italic": True,
+            },
+        ]
+        pdf_bytes = generate_pdf(
+            result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, text_blocks=blocks
+        )
+        assert pdf_bytes[:4] == b"%PDF"
