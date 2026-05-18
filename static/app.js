@@ -27,6 +27,7 @@ const state = {
     target_row_height_mm: 60,
     relock_behaviour: 'keep',
     watermark_text: '',
+    target_dpi: 150,
   },
   // Map photo_id -> override {page, x_mm, y_mm, w_mm, h_mm}
   locked_overrides: {},
@@ -106,6 +107,7 @@ const btnZoomIn         = document.getElementById('zoom-in');
 const btnZoomOut        = document.getElementById('zoom-out');
 const btnZoomReset      = document.getElementById('zoom-reset');
 const watermarkInput    = document.getElementById('watermark-text');
+const targetDpiSel      = document.getElementById('target-dpi');
 const filmstripEl       = document.getElementById('filmstrip');
 const captionModal      = document.getElementById('caption-modal');
 const captionTextInput  = document.getElementById('caption-text-input');
@@ -239,6 +241,12 @@ if (watermarkInput) {
   });
 }
 
+if (targetDpiSel) {
+  targetDpiSel.addEventListener('change', () => {
+    state.config.target_dpi = parseInt(targetDpiSel.value, 10);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Zoom controls
 // ---------------------------------------------------------------------------
@@ -313,6 +321,7 @@ function syncConfigUI() {
   targetRowHeightInput.value = trh;
   targetRowHeightVal.textContent = `${trh} mm`;
   if (watermarkInput) watermarkInput.value = state.config.watermark_text || '';
+  if (targetDpiSel) targetDpiSel.value = String(state.config.target_dpi ?? 150);
 }
 
 function updatePageDimensions() {
@@ -944,7 +953,7 @@ async function exportPdf() {
         page_count: state.page_count,
       },
       jpeg_quality: 85,
-      target_dpi: 150,
+      target_dpi: state.config.target_dpi ?? 150,
       cover_title: state.cover.photo_id
         ? (state.cover.title || state.album || '')
         : null,

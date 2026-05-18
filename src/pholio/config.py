@@ -31,6 +31,7 @@ DEFAULTS = {
     "target_row_height_mm": 60.0,
     "relock_behaviour": "keep",
     "watermark_text": "",
+    "target_dpi": 150,
 }
 
 THUMBNAIL_MAX_SIDE = 400
