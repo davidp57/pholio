@@ -51,6 +51,7 @@ strict = true
 [[tool.mypy.overrides]]
 module = "pholio.pdf_export"
 strict = true
+warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
 module = "tests.*"

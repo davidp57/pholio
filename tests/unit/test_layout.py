@@ -238,7 +238,7 @@ class TestLockMechanism:
         )
         # With "unlock", no photo should be placed at the override position
         locked_placements = [p for p in result.placements if p.locked]
-        assert locked_placements == []
+        assert not locked_placements
 
     def test_relock_behaviour_first(self) -> None:
         cfg = make_cfg(layout_type="grid")
@@ -253,7 +253,7 @@ class TestLockMechanism:
         )
         # With "first", the locked photo is reordered to front but treated as unlocked
         locked_placements = [p for p in result.placements if p.locked]
-        assert locked_placements == []  # "first" does not produce locked placements
+        assert not locked_placements  # "first" does not produce locked placements
         assert len(result.placements) == 4
 
 

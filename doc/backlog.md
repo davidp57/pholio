@@ -43,6 +43,40 @@ Note : Support RAW (CR2, NEF, ARW) non implémenté — nécessite `rawpy`/libra
 
 ## Lots livrés
 
+### Lot POST-1.1 — v1.2 ✅ Livré (2026-05-18)
+
+Améliorations visuelles, mise en page avancée et interactivité.
+
+| Ticket | Titre | Priorité | Statut | Estimé | Réel |
+|---|---|---|---|---|---|
+| PHO-080 | Couleur de fond des pages (sélecteur, appliqué dans PDF) | P2 | ✅ Fait | 35 min | — |
+| PHO-081 | Couleur de fond différente sur la page de garde | P3 | ✅ Fait | 20 min | — |
+| PHO-082 | Placement libre de la photo de garde (sans recadrage forcé) | P2 | ✅ Fait | 45 min | — |
+| PHO-083 | Icônes filmstrip : lock position, lock taille, choisir comme garde (toujours visibles) | P2 | ✅ Fait | 40 min | — |
+| PHO-084 | Tri filmstrip synchronisé avec l'ordre défini par l'utilisateur | P2 | ✅ Fait | 30 min | — |
+| PHO-085 | Synchronisation scroll filmstrip ↔ document | P3 | ✅ Fait | 25 min | — |
+| PHO-086 | Bloc texte libre (police, couleur, effets, placement drag) | P2 | ✅ Fait | 90 min | — |
+
+**Total estimé** : 285 min + 15 min gestion = **300 min (5 h)**
+
+<details>
+<summary>Détail par ticket</summary>
+
+| Ticket | Estimé | Réel | Ratio |
+|---|---|---|---|
+| PHO-080 | 35 min | — | — |
+| PHO-081 | 20 min | — | — |
+| PHO-082 | 45 min | — | — |
+| PHO-083 | 40 min | — | — |
+| PHO-084 | 30 min | — | — |
+| PHO-085 | 25 min | — | — |
+| PHO-086 | 90 min | — | — |
+
+Commits : `dcaa303` (PHO-080+081), `716150b` (PHO-082 à PHO-086)  
+Branche : `feature/post-1.1` → PR → `develop`
+
+</details>
+
 ### Lot INIT — v1.0 ✅ Livré (2026-05-17)
 
 Scaffold complet → application fonctionnelle de bout en bout.

@@ -87,6 +87,14 @@
           <input type="text" id="watermark-text" placeholder="© Mon Album 2025" />
         </label>
 
+        <h3>Couleurs de fond</h3>
+        <label>Pages
+          <input type="color" id="page-bg-color" value="#ffffff" />
+        </label>
+        <label id="cover-bg-label" style="display:none">Page de garde
+          <input type="color" id="cover-bg-color" value="#ffffff" />
+        </label>
+
         <h3>Résolution PDF (DPI)</h3>
         <select id="target-dpi">
           <option value="72">72 dpi — écran</option>
@@ -114,6 +122,8 @@
       <button id="zoom-out" title="Zoom arrière">−</button>
       <span id="zoom-label">100&nbsp;%</span>
       <button id="zoom-reset" title="Réinitialiser le zoom">⊙</button>
+      <span style="width:1px;background:rgba(255,255,255,0.15);margin:4px 6px;align-self:stretch"></span>
+      <button id="btn-add-text" title="Ajouter un bloc texte">T</button>
     </nav>
 
     <div id="main-area">
@@ -176,6 +186,37 @@
       <div class="button-row">
         <button id="caption-modal-ok">✓ Appliquer</button>
         <button id="caption-modal-cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Text block edit modal -->
+  <div id="text-block-modal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h2>Bloc texte</h2>
+      <textarea id="tb-text" class="tb-textarea" rows="3" placeholder="Votre texte…"></textarea>
+      <div class="tb-options">
+        <label>Taille (pt)
+          <input type="number" id="tb-font-size" min="6" max="144" value="24" />
+        </label>
+        <label>Couleur
+          <input type="color" id="tb-font-color" value="#000000" />
+        </label>
+        <label>Alignement
+          <select id="tb-align">
+            <option value="L">Gauche</option>
+            <option value="C" selected>Centré</option>
+            <option value="R">Droite</option>
+          </select>
+        </label>
+        <label></label>
+        <label class="inline-label"><input type="checkbox" id="tb-bold" /> Gras</label>
+        <label class="inline-label"><input type="checkbox" id="tb-italic" /> Italique</label>
+      </div>
+      <div class="button-row">
+        <button id="tb-modal-ok">✓ Appliquer</button>
+        <button id="tb-modal-delete" class="btn-danger">🗑 Supprimer</button>
+        <button id="tb-modal-cancel">Annuler</button>
       </div>
     </div>
   </div>

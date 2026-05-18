@@ -875,3 +875,128 @@ body {
   padding: 8px 10px;
   font-size: 14px;
 }
+
+/* ---- PHO-082: cover photo contain (no crop) ---- */
+.photo-slot.cover img { object-fit: contain; }
+
+/* ---- PHO-083: filmstrip action bar ---- */
+.filmstrip-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  background: rgba(0,0,0,0.55);
+  padding: 2px 0;
+  gap: 2px;
+}
+
+.filmstrip-action-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  border-radius: 3px;
+  text-align: center;
+  transition: background 0.12s, color 0.12s;
+}
+.filmstrip-action-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+.filmstrip-action-btn.active  { color: #ffd700; }
+.filmstrip-action-btn.is-cover { color: #ff9f43; }
+
+/* ---- PHO-084: page badge on filmstrip items ---- */
+.filmstrip-page-badge {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 11;
+  line-height: 1.4;
+}
+
+/* ---- PHO-085: active filmstrip item (scroll sync) ---- */
+.filmstrip-item.active { border-color: var(--highlight); }
+
+/* ---- PHO-086: free text blocks ---- */
+.text-block {
+  position: absolute;
+  cursor: move;
+  box-sizing: border-box;
+  border: 1px dashed rgba(100,140,255,0.5);
+  z-index: 15;
+  min-width: 20px;
+  min-height: 10px;
+  overflow: hidden;
+  user-select: none;
+}
+.text-block:hover { border-color: rgba(100,140,255,0.9); }
+.text-block.selected { border: 1.5px solid #6496ff; }
+
+.text-block-content {
+  width: 100%;
+  height: 100%;
+  padding: 2px 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  word-break: break-word;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+.text-block .tb-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  cursor: se-resize;
+  background: rgba(100,140,255,0.5);
+  z-index: 16;
+}
+
+/* text block modal extras */
+.tb-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 8px 0;
+}
+.tb-options label { font-size: 12px; color: var(--muted); }
+.tb-options input, .tb-options select { width: 100%; }
+.tb-textarea {
+  width: 100%;
+  background: var(--accent);
+  color: var(--text);
+  border: 1px solid #2a4080;
+  border-radius: var(--radius);
+  padding: 8px;
+  font-size: 13px;
+  resize: vertical;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+.btn-danger {
+  background: rgba(180,0,0,0.75);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* add-text toolbar button */
+#btn-add-text {
+  font-weight: 700;
+  font-size: 15px;
+  padding: 0 10px;
+  letter-spacing: 0.05em;
+}

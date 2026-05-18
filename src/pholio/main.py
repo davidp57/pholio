@@ -7,7 +7,7 @@ import sys
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
@@ -61,6 +61,21 @@ class LayoutRequest(BaseModel):
     cover_photo_id: str | None = None
 
 
+class TextBlock(BaseModel):
+    id: str
+    page: int
+    x_mm: float
+    y_mm: float
+    w_mm: float
+    h_mm: float
+    text: str = ""
+    font_size: float = 24.0
+    font_color: str = Field(default="#000000", pattern=r"^#[0-9a-fA-F]{6}$")
+    align: Literal["L", "C", "R"] = "C"
+    bold: bool = False
+    italic: bool = False
+
+
 class ExportRequest(BaseModel):
     album_name: str
     page_w_mm: float = 297.0
@@ -71,6 +86,10 @@ class ExportRequest(BaseModel):
     cover_title: str | None = None
     watermark_text: str | None = None
     captions: dict[str, str] = Field(default_factory=dict)
+    page_bg_color: str = Field(default="#ffffff", pattern=r"^#[0-9a-fA-F]{6}$")
+    cover_bg_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    cover_photo_id: str | None = None
+    text_blocks: list[TextBlock] = Field(default_factory=list)
 
 
 def create_app() -> FastAPI:
@@ -225,6 +244,10 @@ def create_app() -> FastAPI:
             cover_title=req.cover_title,
             watermark_text=req.watermark_text or None,
             captions=req.captions or None,
+            page_bg_color=req.page_bg_color,
+            cover_bg_color=req.cover_bg_color,
+            cover_photo_id=req.cover_photo_id,
+            text_blocks=[b.model_dump() for b in req.text_blocks] if req.text_blocks else None,
         )
         return Response(
             content=pdf_bytes,
