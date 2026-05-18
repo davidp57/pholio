@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pholio"
-version = "1.0.1"
+version = "1.1.0"
 description = "Photo album PDF generator with smart layout — web app locale, moteur de mise en page automatique, export PDF haute résolution."
 authors = ["David"]
 readme = "README.md"
@@ -17,6 +17,7 @@ uvicorn = {extras = ["standard"], version = ">=0.30"}
 pillow = ">=10.0"
 fpdf2 = ">=2.7"
 python-multipart = ">=0.0.9"
+pillow-heif = ">=0.18"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"

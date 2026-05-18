@@ -112,6 +112,12 @@ body {
 .button-row button:active { opacity: 0.7; }
 
 /* ---- Canvas area ---- */
+#main-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
 #canvas-area {
   flex: 1;
   overflow: auto;
@@ -474,6 +480,23 @@ body {
 }
 
 /* ---- Cover section ---- */
+.inline-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.inline-label input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--highlight);
+  cursor: pointer;
+}
+
 .cover-info {
   display: flex;
   align-items: center;
@@ -692,4 +715,163 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---- Filmstrip divider ---- */
+.filmstrip-divider {
+  width: 6px;
+  cursor: col-resize;
+  background: var(--accent);
+  border-left: 1px solid #2a4080;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.filmstrip-divider:hover,
+.filmstrip-divider.dragging {
+  background: var(--highlight);
+}
+
+/* ---- Filmstrip ---- */
+.filmstrip {
+  width: 130px;
+  min-width: 60px;
+  background: rgba(22, 33, 62, 0.97);
+  border-left: 1px solid var(--accent);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 25;
+  flex-shrink: 0;
+}
+
+.filmstrip-item {
+  flex-shrink: 0;
+  width: 100%;
+  cursor: grab;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.15s, opacity 0.15s;
+  user-select: none;
+}
+
+.filmstrip-item img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.filmstrip-item.drag-over {
+  border-color: var(--highlight);
+  opacity: 0.85;
+}
+
+.filmstrip-item.dragging { opacity: 0.35; }
+
+.filmstrip-caption-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  background: var(--highlight);
+  border-radius: 50%;
+}
+
+/* ---- Filmstrip delete button ---- */
+.filmstrip-delete-btn {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: rgba(180,0,0,0.75);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  z-index: 10;
+  line-height: 1;
+}
+
+.filmstrip-item:hover .filmstrip-delete-btn { display: flex; }
+
+/* ---- Watermark overlay on page (preview) ---- */
+.watermark-overlay {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  color: rgba(150, 150, 150, 0.55);
+  font-size: 10px;
+  font-style: italic;
+  pointer-events: none;
+  z-index: 4;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+.caption-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+  padding: 3px 6px;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Caption button on photo slot ---- */
+.photo-slot .caption-btn {
+  position: absolute;
+  bottom: 28px;
+  left: 4px;
+  background: rgba(0,0,0,0.55);
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  z-index: 20;
+  line-height: 1;
+}
+
+.photo-slot:hover .caption-btn { display: flex; }
+.photo-slot.has-caption .caption-btn { display: flex; background: rgba(0,100,60,0.8); }
+
+/* ---- Caption modal input ---- */
+.caption-modal-input {
+  width: 100%;
+  background: var(--accent);
+  color: var(--text);
+  border: 1px solid #2a4080;
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 14px;
 }

@@ -17,7 +17,18 @@ Les estimations représentent le **temps Copilot** (temps d'implémentation AI).
 
 ## Lots actifs
 
-*(Aucun lot actif)*
+### Lot POST-1.0 — v1.1 🛠️ En cours
+
+Fonctionnalités supplémentaires post-release (tout en un seul PR sur `develop`).
+
+| Ticket | Titre | Priorité | Statut | Estimé | Réel |
+|---|---|---|---|---|---|
+| PHO-070 | Filigrane sur les pages (texte, bas-droite) | P3 | ✅ Fait | 30 min | — |
+| PHO-071 | Légende textuelle sur les photos | P3 | ✅ Fait | 40 min | — |
+| PHO-072 | Panneau filmstrip avec réorganisation par drag | P2 | ✅ Fait | 50 min | — |
+| PHO-073 | Support HEIC/HEIF via `pillow-heif` | P3 | ✅ Fait | 20 min | — |
+
+Note : Support RAW (CR2, NEF, ARW) non implémenté — nécessite `rawpy`/libraw, incompatible PyInstaller. Créer un ticket séparé PHO-074 si besoin.
 
 ---
 
@@ -85,13 +96,4 @@ Scaffold complet → application fonctionnelle de bout en bout.
 
 ## Lots planifiés
 
-### Lot POST-1.0 — v1.1 (À planifier)
-
-Fonctionnalités supplémentaires post-release.
-
-| Ticket | Titre | Priorité |
-|---|---|---------|
-| PHO-070 | Filigrane / logo sur les pages | P3 |
-| PHO-071 | Titre ou légende textuelle sur les photos | P3 |
-| PHO-072 | Panneau filmstrip (réorganisation par drag) | P2 |
-| PHO-073 | Support formats RAW (CR2, NEF, ARW) | P3 |
+*(Aucun lot planifié pour l’instant)*
