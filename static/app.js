@@ -562,7 +562,7 @@ function createPhotoSlot(placement, thumbUrl, sc) {
   coverBtn.className = 'cover-btn';
   const isCover = placement.photo_id === state.cover.photo_id;
   coverBtn.title = isCover ? 'Retirer la page de garde' : 'D\u00e9finir comme page de garde';
-  coverBtn.textContent = '\ud83d\udcd6';
+  coverBtn.textContent = '⭐';
   coverBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleCover(placement.photo_id);

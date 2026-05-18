@@ -884,10 +884,14 @@ body {
   display: flex;
   flex-direction: row;
   justify-content: space-around;
-  background: rgba(0,0,0,0.55);
+  background: transparent;
   padding: 2px 0;
   gap: 2px;
+  transition: background 0.12s;
 }
+
+/* Show bar background on hover */
+.filmstrip-item:hover .filmstrip-actions { background: rgba(0,0,0,0.55); }
 
 .filmstrip-action-btn {
   flex: 1;
@@ -900,10 +904,28 @@ body {
   line-height: 1;
   border-radius: 3px;
   text-align: center;
-  transition: background 0.12s, color 0.12s;
+  /* Hidden by default; revealed on hover or when ON */
+  opacity: 0;
+  pointer-events: none;
+  transition: background 0.12s, color 0.12s, opacity 0.12s;
 }
+
+/* Show all buttons on hover */
+.filmstrip-item:hover .filmstrip-action-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .filmstrip-action-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
-.filmstrip-action-btn.active  { color: #ffd700; }
+
+/* Always visible (and readable) when ON */
+.filmstrip-action-btn.active,
+.filmstrip-action-btn.is-cover {
+  opacity: 1;
+  pointer-events: auto;
+  text-shadow: 0 0 4px rgba(0,0,0,0.9);
+}
+.filmstrip-action-btn.active   { color: #ffd700; }
 .filmstrip-action-btn.is-cover { color: #ff9f43; }
 
 /* ---- PHO-084: page badge on filmstrip items ---- */
