@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import sys
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
@@ -11,6 +12,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from PIL import Image, ImageOps
 from pydantic import BaseModel, Field
 
 from pholio.config import IMAGES_DIR, THUMBNAILS_DIR
@@ -228,6 +230,34 @@ def create_app() -> FastAPI:
             content=pdf_bytes,
             media_type="application/pdf",
             headers={"Content-Disposition": "attachment; filename=album.pdf"},
+        )
+
+    # --- Cover JPG export ---
+
+    @app.get("/api/export/cover-jpg")
+    async def export_cover_jpg(album_name: str, photo_id: str) -> Response:
+        images_dir = Path(IMAGES_DIR).resolve()
+        album_path = (images_dir / album_name).resolve()
+        if not album_path.is_relative_to(images_dir):
+            raise HTTPException(status_code=400, detail="Invalid album name")
+        photo_path = (album_path / photo_id).resolve()
+        if not photo_path.is_relative_to(album_path):
+            raise HTTPException(status_code=400, detail="Invalid photo id")
+        if not photo_path.exists():
+            raise HTTPException(status_code=404, detail="Photo not found")
+        try:
+            with Image.open(photo_path) as raw:
+                oriented: Image.Image = ImageOps.exif_transpose(raw) or raw
+                rgb = oriented.convert("RGB") if oriented.mode != "RGB" else oriented
+                buf = io.BytesIO()
+                rgb.save(buf, format="JPEG", quality=92)
+                jpg_bytes = buf.getvalue()
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return Response(
+            content=jpg_bytes,
+            media_type="image/jpeg",
+            headers={"Content-Disposition": f'attachment; filename="{album_name}.jpg"'},
         )
 
     # --- Static files (must be last) ---

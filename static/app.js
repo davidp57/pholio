@@ -111,6 +111,7 @@ const targetDpiSel      = document.getElementById('target-dpi');
 const filmstripEl       = document.getElementById('filmstrip');
 const filmstripDivider  = document.getElementById('filmstrip-divider');
 const captionModal      = document.getElementById('caption-modal');
+const exportCoverJpgCheck = document.getElementById('export-cover-jpg');
 const captionTextInput  = document.getElementById('caption-text-input');
 
 // Height (mm) reserved at the top of the cover page for the album title
@@ -976,6 +977,24 @@ async function exportPdf() {
     a.download = `${state.album}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
+
+    // Optional: cover photo as JPG
+    if (exportCoverJpgCheck?.checked && state.cover.photo_id) {
+      const params = new URLSearchParams({
+        album_name: state.album,
+        photo_id: state.cover.photo_id,
+      });
+      const jpgRes = await fetch(`/api/export/cover-jpg?${params}`);
+      if (jpgRes.ok) {
+        const jpgBlob = await jpgRes.blob();
+        const jpgUrl  = URL.createObjectURL(jpgBlob);
+        const jpgA    = document.createElement('a');
+        jpgA.href     = jpgUrl;
+        jpgA.download = `${state.album}.jpg`;
+        jpgA.click();
+        URL.revokeObjectURL(jpgUrl);
+      }
+    }
   } finally {
     hideSpinner();
   }

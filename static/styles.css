@@ -480,6 +480,23 @@ body {
 }
 
 /* ---- Cover section ---- */
+.inline-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.inline-label input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--highlight);
+  cursor: pointer;
+}
+
 .cover-info {
   display: flex;
   align-items: center;
@@ -745,7 +762,8 @@ body {
 
 .filmstrip-item img {
   width: 100%;
-  height: 80px;
+  aspect-ratio: 4 / 3;
+  height: auto;
   object-fit: cover;
   display: block;
   pointer-events: none;
