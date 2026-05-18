@@ -88,11 +88,32 @@
 
 ---
 
-## v1.1 — Not yet planned
+## v1.1 — Post-release enhancements ✅ Livré (2026-05-18)
+
+- Watermark text on pages (bottom-right, configurable)
+- Photo captions (text overlay, rendered in PDF)
+- Filmstrip panel (drag-to-reorder, delete, cover selection)
+- HEIC/HEIF support via `pillow-heif`
+- Configurable export DPI (72 / 100 / 150 / 200 / 300)
+- Cover photo JPG export alongside PDF
+
+---
+
+## v1.2 — Visual polish & free-form editing ✅ Livré (2026-05-18)
+
+- Page background colour (per-page, PDF applied)
+- Separate cover page background colour
+- Cover photo "contain" mode (no crop)
+- Filmstrip icon improvements (always-visible lock / size / cover buttons)
+- Filmstrip order sync with user-defined photo order
+- Filmstrip ↔ document scroll sync
+- Free-form text blocks (draggable, font/color/align, persisted in session)
+
+---
+
+## v1.3 — Not yet planned
 
 Candidates from the backlog:
 
 - Custom watermark / logo on pages
-- Page title / caption text overlaid on photos
-- Photo filmstrip panel (drag-to-reorder)
 - RAW image format support (CR2, NEF, ARW)
