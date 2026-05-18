@@ -49,9 +49,15 @@ class _AlbumPDF(FPDF):  # type: ignore[misc]
 
 
 def _hex_to_rgb(color: str) -> tuple[int, int, int]:
-    """Convert a '#rrggbb' hex string to an (r, g, b) integer tuple."""
+    """Convert a '#rrggbb' hex string to an (r, g, b) integer tuple.
+
+    Returns (0, 0, 0) for any malformed input as a safe fallback.
+    """
     c = color.lstrip("#")
-    return int(c[:2], 16), int(c[2:4], 16), int(c[4:], 16)
+    try:
+        return int(c[:2], 16), int(c[2:4], 16), int(c[4:], 16)
+    except ValueError:
+        return (0, 0, 0)
 
 
 def _crop_to_aspect(img: Image.Image, target_w_mm: float, target_h_mm: float) -> Image.Image:
@@ -206,7 +212,7 @@ def generate_pdf(
                 oriented.convert("RGB") if oriented.mode not in ("RGB", "L") else oriented
             )
 
-            if placement.photo_id == cover_photo_id:
+            if placement.photo_id == cover_photo_id and placement.page == 0:
                 # Contain mode: no crop, centred in slot
                 x_off, y_off, img_w_mm, img_h_mm = _contain_in_slot(
                     rgb, placement.w_mm, placement.h_mm

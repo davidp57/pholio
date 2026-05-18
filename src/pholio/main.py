@@ -7,7 +7,7 @@ import sys
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
@@ -70,8 +70,8 @@ class TextBlock(BaseModel):
     h_mm: float
     text: str = ""
     font_size: float = 24.0
-    font_color: str = "#000000"
-    align: str = "C"
+    font_color: str = Field(default="#000000", pattern=r"^#[0-9a-fA-F]{6}$")
+    align: Literal["L", "C", "R"] = "C"
     bold: bool = False
     italic: bool = False
 
@@ -86,8 +86,8 @@ class ExportRequest(BaseModel):
     cover_title: str | None = None
     watermark_text: str | None = None
     captions: dict[str, str] = Field(default_factory=dict)
-    page_bg_color: str = "#ffffff"
-    cover_bg_color: str | None = None
+    page_bg_color: str = Field(default="#ffffff", pattern=r"^#[0-9a-fA-F]{6}$")
+    cover_bg_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     cover_photo_id: str | None = None
     text_blocks: list[TextBlock] = Field(default_factory=list)
 

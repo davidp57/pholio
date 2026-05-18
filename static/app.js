@@ -508,8 +508,8 @@ function renderCanvas() {
   }
 
   // Render text blocks
+  const pages = pagesContainer.querySelectorAll('.page');
   state.text_blocks.forEach(block => {
-    const pages = pagesContainer.querySelectorAll('.page');
     const pageEl = pages[block.page];
     if (!pageEl) return;
     pageEl.appendChild(createTextBlockEl(block, sc));
@@ -1313,6 +1313,7 @@ function renderFilmstrip() {
     const lockBtn = document.createElement('button');
     lockBtn.className = 'filmstrip-action-btn' + (state.locked_overrides[photo.id] ? ' active' : '');
     lockBtn.title = 'Verrouiller la position';
+    lockBtn.setAttribute('aria-label', 'Verrouiller la position');
     lockBtn.textContent = '🔒';
     lockBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -1331,6 +1332,7 @@ function renderFilmstrip() {
     const sizeBtn = document.createElement('button');
     sizeBtn.className = 'filmstrip-action-btn' + (state.size_overrides[photo.id] ? ' active' : '');
     sizeBtn.title = 'Verrouiller la taille';
+    sizeBtn.setAttribute('aria-label', 'Verrouiller la taille');
     sizeBtn.textContent = '⇔';
     sizeBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -1348,6 +1350,7 @@ function renderFilmstrip() {
     const isCover = state.cover.photo_id === photo.id;
     coverBtn.className = 'filmstrip-action-btn' + (isCover ? ' is-cover' : '');
     coverBtn.title = isCover ? 'Retirer de la couverture' : 'Définir comme couverture';
+    coverBtn.setAttribute('aria-label', isCover ? 'Retirer de la couverture' : 'Définir comme couverture');
     coverBtn.textContent = '⭐';
     coverBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -1463,26 +1466,32 @@ function renderFilmstrip() {
 (function initScrollSync() {
   const mainArea = document.getElementById('main-area');
   if (!mainArea) return;
+  let scrollRafPending = false;
   mainArea.addEventListener('scroll', () => {
-    if (!filmstripEl) return;
-    const rect = mainArea.getBoundingClientRect();
-    const centerY = rect.top + rect.height / 2;
-    let closestPage = 0;
-    let closestDist = Infinity;
-    pagesContainer.querySelectorAll('.page').forEach((pageEl, idx) => {
-      const pr = pageEl.getBoundingClientRect();
-      const dist = Math.abs(pr.top + pr.height / 2 - centerY);
-      if (dist < closestDist) { closestDist = dist; closestPage = idx; }
-    });
-    const photosOnPage = new Set(
-      state.placements.filter(p => p.page === closestPage).map(p => p.photo_id)
-    );
-    filmstripEl.querySelectorAll('.filmstrip-item').forEach(item => {
-      if (photosOnPage.has(item.dataset.photoId)) {
-        item.classList.add('active');
-      } else {
-        item.classList.remove('active');
-      }
+    if (scrollRafPending) return;
+    scrollRafPending = true;
+    requestAnimationFrame(() => {
+      scrollRafPending = false;
+      if (!filmstripEl) return;
+      const rect = mainArea.getBoundingClientRect();
+      const centerY = rect.top + rect.height / 2;
+      let closestPage = 0;
+      let closestDist = Infinity;
+      pagesContainer.querySelectorAll('.page').forEach((pageEl, idx) => {
+        const pr = pageEl.getBoundingClientRect();
+        const dist = Math.abs(pr.top + pr.height / 2 - centerY);
+        if (dist < closestDist) { closestDist = dist; closestPage = idx; }
+      });
+      const photosOnPage = new Set(
+        state.placements.filter(p => p.page === closestPage).map(p => p.photo_id)
+      );
+      filmstripEl.querySelectorAll('.filmstrip-item').forEach(item => {
+        if (photosOnPage.has(item.dataset.photoId)) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
     });
   }, { passive: true });
 }());

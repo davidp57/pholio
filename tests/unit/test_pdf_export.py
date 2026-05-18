@@ -6,9 +6,28 @@ import contextlib
 import zlib
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from pholio.layout import LayoutResult, PhotoPlacement
+
+
+def _decompress_streams(pdf_bytes: bytes) -> list[bytes]:
+    """Return all successfully decompressed zlib streams found in a PDF byte string."""
+    streams: list[bytes] = []
+    i = 0
+    while i < len(pdf_bytes) - 6:
+        if pdf_bytes[i : i + 1] == b"x" and pdf_bytes[i + 1 : i + 2] in (
+            b"\x9c",
+            b"\xda",
+            b"\x01",
+        ):
+            for size in (512, 1024, 2048, 4096, 8192, 16384, 32768):
+                with contextlib.suppress(zlib.error):
+                    streams.append(zlib.decompress(pdf_bytes[i : i + size]))
+                    break
+        i += 1
+    return streams
 
 
 class TestGeneratePdf:
@@ -82,21 +101,8 @@ class TestGeneratePdf:
 
         # Decompress all zlib streams and count occurrences of the watermark
         wm_bytes = wm.encode("latin-1")
-        occurrences = 0
-        i = 0
-        while i < len(pdf_bytes) - 6:
-            if pdf_bytes[i : i + 1] == b"x" and pdf_bytes[i + 1 : i + 2] in (
-                b"\x9c",
-                b"\xda",
-                b"\x01",
-            ):
-                for size in (512, 1024, 2048, 4096, 8192, 16384):
-                    with contextlib.suppress(zlib.error):
-                        decompressed = zlib.decompress(pdf_bytes[i : i + size])
-                        if wm_bytes in decompressed:
-                            occurrences += 1
-                        break
-            i += 1
+        streams = _decompress_streams(pdf_bytes)
+        occurrences = sum(wm_bytes in s for s in streams)
 
         assert occurrences >= page_count, (
             f"Watermark found in {occurrences} stream(s), expected at least {page_count}"
@@ -157,16 +163,21 @@ class TestGeneratePdf:
         from pholio.pdf_export import generate_pdf
 
         result = LayoutResult(placements=[], page_count=2)
-        pdf_bytes = generate_pdf(
+        pdf_colored = generate_pdf(
             result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, page_bg_color="#1a2b3c"
         )
-        assert pdf_bytes[:4] == b"%PDF"
+        pdf_default = generate_pdf(
+            result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, page_bg_color="#ffffff"
+        )
+        assert pdf_colored[:4] == b"%PDF"
+        # A non-white background must produce different PDF content than white
+        assert pdf_colored != pdf_default
 
     def test_cover_bg_color_different_from_pages(self, tmp_path: Path) -> None:
         from pholio.pdf_export import generate_pdf
 
         result = LayoutResult(placements=[], page_count=3)
-        pdf_bytes = generate_pdf(
+        pdf_with_cover = generate_pdf(
             result,
             tmp_path,
             page_w_mm=210.0,
@@ -174,11 +185,17 @@ class TestGeneratePdf:
             page_bg_color="#ffffff",
             cover_bg_color="#111111",
         )
-        assert pdf_bytes[:4] == b"%PDF"
+        pdf_uniform = generate_pdf(
+            result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, page_bg_color="#ffffff"
+        )
+        assert pdf_with_cover[:4] == b"%PDF"
+        # A distinct cover colour must change the PDF content
+        assert pdf_with_cover != pdf_uniform
 
     def test_cover_photo_id_contain_no_crop(self, tmp_path: Path) -> None:
-        from pholio.pdf_export import generate_pdf
+        from pholio.pdf_export import _contain_in_slot, generate_pdf
 
+        # 600x400 = landscape 3:2 aspect ratio
         img = Image.new("RGB", (600, 400), color=(80, 120, 160))
         img.save(tmp_path / "COVER.jpg", format="JPEG")
         placement = PhotoPlacement(
@@ -189,6 +206,14 @@ class TestGeneratePdf:
             result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, cover_photo_id="COVER.jpg"
         )
         assert pdf_bytes[:4] == b"%PDF"
+
+        # _contain_in_slot: portrait slot (210x297), landscape image (3:2)
+        # → width-constrained: img_w=210, img_h=210/1.5=140, y_off=(297-140)/2=78.5
+        x_off, y_off, img_w, img_h = _contain_in_slot(img, 210.0, 297.0)
+        assert img_w == pytest.approx(210.0, rel=1e-3)
+        assert img_h == pytest.approx(140.0, rel=1e-3)
+        assert x_off == pytest.approx(0.0, abs=1e-3)
+        assert y_off == pytest.approx(78.5, rel=1e-2)
 
     def test_text_blocks_in_pdf(self, tmp_path: Path) -> None:
         from pholio.pdf_export import generate_pdf
@@ -228,3 +253,7 @@ class TestGeneratePdf:
             result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, text_blocks=blocks
         )
         assert pdf_bytes[:4] == b"%PDF"
+        # Both block texts must appear in at least one decompressed content stream
+        streams = _decompress_streams(pdf_bytes)
+        assert any(b"Titre de l'album" in s for s in streams)
+        assert any(b"Description" in s for s in streams)
