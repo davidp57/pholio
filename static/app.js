@@ -320,7 +320,7 @@ document.addEventListener('wheel', (e) => {
 
 document.querySelectorAll('.modal-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
-    const behaviour = btn.dataset.behaviour;
+    const { behaviour } = btn.dataset;
     if (behaviour === 'unlock') {
       state.locked_overrides = {};
     }
@@ -672,7 +672,7 @@ function attachInteractions() {
       },
     },
   }).on('dragmove', (event) => {
-    const target = event.target;
+    const { target } = event;
     const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
     const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
     target.style.transform = `translate(${x}px, ${y}px)`;
@@ -693,7 +693,7 @@ function attachInteractions() {
       },
     },
   }).on('resizemove', (event) => {
-    const target = event.target;
+    const { target } = event;
     target.style.width  = `${event.rect.width}px`;
     target.style.height = `${event.rect.height}px`;
   });
@@ -703,7 +703,7 @@ function attachInteractions() {
   interact('.text-block').draggable({
     listeners: {
       move(event) {
-        const blockId = event.target.dataset.blockId;
+        const { blockId } = event.target.dataset;
         const block = state.text_blocks.find(b => b.id === blockId);
         if (!block) return;
         block.x_mm += event.dx / state.scale;
@@ -716,7 +716,7 @@ function attachInteractions() {
     edges: { right: true, bottom: true, bottomRight: '.tb-resize-handle' },
     listeners: {
       move(event) {
-        const blockId = event.target.dataset.blockId;
+        const { blockId } = event.target.dataset;
         const block = state.text_blocks.find(b => b.id === blockId);
         if (!block) return;
         block.w_mm = event.rect.width  / state.scale;
@@ -858,7 +858,7 @@ document.getElementById('size-dialog-ok').addEventListener('click', async () => 
   const h = parseFloat(sizeHInput.value);
   sizeDialog.style.display = 'none';
   if (!(w > 0 && h > 0)) return;
-  const photoId = sizeDialog.dataset.photoId;
+  const { photoId } = sizeDialog.dataset;
   if (photoId) await setSizeOnly(photoId, w, h);
 });
 
@@ -1091,7 +1091,7 @@ if (captionModal) {
   });
 
   document.getElementById('caption-modal-ok').addEventListener('click', () => {
-    const photoId = captionModal.dataset.photoId;
+    const { photoId } = captionModal.dataset;
     const text = captionTextInput.value.trim();
     if (text) {
       state.captions[photoId] = text;
@@ -1170,7 +1170,7 @@ function openTextBlockModal(blockId) {
 
 if (tbModalOk) {
   tbModalOk.addEventListener('click', () => {
-    const blockId = textBlockModal.dataset.blockId;
+    const { blockId } = textBlockModal.dataset;
     const block = state.text_blocks.find(b => b.id === blockId);
     if (block) {
       block.text       = tbTextArea.value;
@@ -1187,7 +1187,7 @@ if (tbModalOk) {
 
 if (tbModalDelete) {
   tbModalDelete.addEventListener('click', () => {
-    const blockId = textBlockModal.dataset.blockId;
+    const { blockId } = textBlockModal.dataset;
     state.text_blocks = state.text_blocks.filter(b => b.id !== blockId);
     textBlockModal.style.display = 'none';
     renderCanvas();

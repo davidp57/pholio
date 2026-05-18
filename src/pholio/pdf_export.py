@@ -12,7 +12,7 @@ from PIL import Image, ImageOps
 from pholio.layout import LayoutResult
 
 
-class _AlbumPDF(FPDF):
+class _AlbumPDF(FPDF):  # type: ignore[misc]
     """FPDF subclass that renders a background fill (header) and an optional
     footer watermark on every page via the official fpdf2 hooks."""
 
@@ -51,7 +51,7 @@ class _AlbumPDF(FPDF):
 def _hex_to_rgb(color: str) -> tuple[int, int, int]:
     """Convert a '#rrggbb' hex string to an (r, g, b) integer tuple."""
     c = color.lstrip("#")
-    return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
+    return int(c[:2], 16), int(c[2:4], 16), int(c[4:], 16)
 
 
 def _crop_to_aspect(img: Image.Image, target_w_mm: float, target_h_mm: float) -> Image.Image:
@@ -92,6 +92,56 @@ def _contain_in_slot(
     x_offset = (slot_w_mm - img_w_mm) / 2
     y_offset = (slot_h_mm - img_h_mm) / 2
     return x_offset, y_offset, img_w_mm, img_h_mm
+
+
+def _render_cover_title(
+    pdf: _AlbumPDF,
+    cover_title: str,
+    page_w_mm: float,
+) -> None:
+    """Render a black title bar with white text at the top of page 1."""
+    from pholio.layout import COVER_TITLE_H_MM
+
+    title_h = COVER_TITLE_H_MM
+    pdf.page = 1
+    pdf.set_fill_color(0, 0, 0)
+    pdf.rect(0.0, 0.0, page_w_mm, title_h, "F")
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(0.0, 2.0)
+    pdf.cell(page_w_mm, title_h - 4.0, cover_title, align="C")
+
+
+def _render_text_blocks(
+    pdf: _AlbumPDF,
+    text_blocks: list[dict[str, Any]],
+    page_count: int,
+) -> None:
+    """Render free-floating text blocks onto their respective pages."""
+    for block in text_blocks:
+        pg = int(block.get("page", 0)) + 1
+        if pg < 1 or pg > page_count:
+            continue
+        pdf.page = pg
+        style = ""
+        if block.get("bold"):
+            style += "B"
+        if block.get("italic"):
+            style += "I"
+        font_size = float(block.get("font_size", 24))
+        pdf.set_font("Helvetica", style, font_size)
+        r, g, b = _hex_to_rgb(str(block.get("font_color", "#000000")))
+        pdf.set_text_color(r, g, b)
+        line_h = font_size * 0.352778 * 1.2  # pt → mm with 1.2 line spacing
+        pdf.set_xy(float(block["x_mm"]), float(block["y_mm"]))
+        pdf.multi_cell(
+            float(block["w_mm"]),
+            line_h,
+            str(block.get("text", "")),
+            align=str(block.get("align", "C")),
+            border=0,
+        )
+        pdf.set_text_color(0, 0, 0)
 
 
 def generate_pdf(
@@ -194,61 +244,28 @@ def generate_pdf(
         pdf.image(buf, x=place_x, y=place_y, w=place_w, h=place_h)
 
         # Render caption overlay if present
-        if captions:
-            caption_text = captions.get(placement.photo_id, "")
-            if caption_text:
-                _cap_h = 6.5
-                pdf.set_fill_color(20, 20, 20)
-                pdf.rect(
-                    placement.x_mm,
-                    placement.y_mm + placement.h_mm - _cap_h,
-                    placement.w_mm,
-                    _cap_h,
-                    "F",
-                )
-                pdf.set_font("Helvetica", "", 7)
-                pdf.set_text_color(240, 240, 240)
-                pdf.set_xy(placement.x_mm, placement.y_mm + placement.h_mm - _cap_h)
-                pdf.cell(placement.w_mm, _cap_h, caption_text, align="C")
-                pdf.set_text_color(0, 0, 0)
+        if captions and (caption_text := captions.get(placement.photo_id, "")):
+            _cap_h = 6.5
+            pdf.set_fill_color(20, 20, 20)
+            pdf.rect(
+                placement.x_mm,
+                placement.y_mm + placement.h_mm - _cap_h,
+                placement.w_mm,
+                _cap_h,
+                "F",
+            )
+            pdf.set_font("Helvetica", "", 7)
+            pdf.set_text_color(240, 240, 240)
+            pdf.set_xy(placement.x_mm, placement.y_mm + placement.h_mm - _cap_h)
+            pdf.cell(placement.w_mm, _cap_h, caption_text, align="C")
+            pdf.set_text_color(0, 0, 0)
 
     # Render cover title on page 1 (first page), at the top
     if cover_title and layout_result.page_count > 0:
-        from pholio.layout import COVER_TITLE_H_MM
-
-        title_h = COVER_TITLE_H_MM
-        pdf.page = 1
-        pdf.set_fill_color(0, 0, 0)
-        pdf.rect(0.0, 0.0, page_w_mm, title_h, "F")
-        pdf.set_font("Helvetica", "B", 22)
-        pdf.set_text_color(255, 255, 255)
-        pdf.set_xy(0.0, 2.0)
-        pdf.cell(page_w_mm, title_h - 4.0, cover_title, align="C")
+        _render_cover_title(pdf, cover_title, page_w_mm)
 
     # Render text blocks
-    for block in text_blocks or []:
-        pg = int(block.get("page", 0)) + 1
-        if pg < 1 or pg > layout_result.page_count:
-            continue
-        pdf.page = pg
-        style = ""
-        if block.get("bold"):
-            style += "B"
-        if block.get("italic"):
-            style += "I"
-        font_size = float(block.get("font_size", 24))
-        pdf.set_font("Helvetica", style, font_size)
-        r, g, b = _hex_to_rgb(str(block.get("font_color", "#000000")))
-        pdf.set_text_color(r, g, b)
-        line_h = font_size * 0.352778 * 1.2  # pt → mm with 1.2 line spacing
-        pdf.set_xy(float(block["x_mm"]), float(block["y_mm"]))
-        pdf.multi_cell(
-            float(block["w_mm"]),
-            line_h,
-            str(block.get("text", "")),
-            align=str(block.get("align", "C")),
-            border=0,
-        )
-        pdf.set_text_color(0, 0, 0)
+    if text_blocks:
+        _render_text_blocks(pdf, text_blocks, layout_result.page_count)
 
     return bytes(pdf.output())

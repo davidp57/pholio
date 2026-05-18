@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import zlib
 from pathlib import Path
 
@@ -90,13 +91,11 @@ class TestGeneratePdf:
                 b"\x01",
             ):
                 for size in (512, 1024, 2048, 4096, 8192, 16384):
-                    try:
+                    with contextlib.suppress(zlib.error):
                         decompressed = zlib.decompress(pdf_bytes[i : i + size])
                         if wm_bytes in decompressed:
                             occurrences += 1
                         break
-                    except zlib.error:
-                        pass
             i += 1
 
         assert occurrences >= page_count, (

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from pathlib import Path
 from typing import Any
@@ -27,12 +28,10 @@ def load_session(album_name: str) -> dict[str, Any]:
     """
     path = _session_path(album_name)
     if path.exists():
-        try:
+        with contextlib.suppress(json.JSONDecodeError, OSError):
             data = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(data, dict) and data.get("version") == SESSION_SCHEMA_VERSION:
                 return data
-        except (json.JSONDecodeError, OSError):
-            pass
 
     return {
         "version": SESSION_SCHEMA_VERSION,
