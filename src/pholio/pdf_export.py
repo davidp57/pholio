@@ -142,10 +142,12 @@ def generate_pdf(
     if watermark_text:
         pdf.set_font("Helvetica", "I", 9)
         pdf.set_text_color(170, 170, 170)
+        wm_w = pdf.get_string_width(watermark_text)
+        x = page_w_mm - wm_w - 4
+        y = page_h_mm - 3
         for pg in range(1, layout_result.page_count + 1):
             pdf.page = pg
-            pdf.set_xy(0, page_h_mm - 7)
-            pdf.cell(page_w_mm - 4, 7, watermark_text, align="R")
+            pdf.text(x, y, watermark_text)
         pdf.set_text_color(0, 0, 0)
 
     return bytes(pdf.output())
