@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
+from PIL import Image
 
 from pholio.config import SESSION_SCHEMA_VERSION
 
@@ -65,3 +66,35 @@ async def test_session_defaults_when_missing(
     data = response.json()
     assert data["version"] == 1
     assert "config" in data
+
+
+@pytest.mark.asyncio
+async def test_export_cover_jpg_returns_jpeg(
+    async_client: AsyncClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    album_dir = tmp_path / "images" / "TestAlbum"
+    album_dir.mkdir(parents=True)
+    img = Image.new("RGB", (800, 600), color=(100, 150, 200))
+    img.save(album_dir / "cover.jpg", format="JPEG")
+
+    response = await async_client.get(
+        "/api/export/cover-jpg",
+        params={"album_name": "TestAlbum", "photo_id": "cover.jpg"},
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("image/jpeg")
+    assert len(response.content) > 0
+
+
+@pytest.mark.asyncio
+async def test_export_cover_jpg_rejects_path_traversal(
+    async_client: AsyncClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "images").mkdir(parents=True)
+    response = await async_client.get(
+        "/api/export/cover-jpg",
+        params={"album_name": "TestAlbum", "photo_id": "../secret.jpg"},
+    )
+    assert response.status_code in (400, 404)

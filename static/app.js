@@ -26,11 +26,15 @@ const state = {
     spacing_mm: 5,
     target_row_height_mm: 60,
     relock_behaviour: 'keep',
+    watermark_text: '',
+    target_dpi: 300,
   },
   // Map photo_id -> override {page, x_mm, y_mm, w_mm, h_mm}
   locked_overrides: {},
   // Map photo_id -> size override {w_mm, h_mm} (no position lock)
   size_overrides: {},
+  // Map photo_id -> caption text string
+  captions: {},
   // Currently selected photo IDs (for batch operations)
   selected_photos: [],
   // Cover page config
@@ -102,6 +106,13 @@ const zoomLabel         = document.getElementById('zoom-label');
 const btnZoomIn         = document.getElementById('zoom-in');
 const btnZoomOut        = document.getElementById('zoom-out');
 const btnZoomReset      = document.getElementById('zoom-reset');
+const watermarkInput    = document.getElementById('watermark-text');
+const targetDpiSel      = document.getElementById('target-dpi');
+const filmstripEl       = document.getElementById('filmstrip');
+const filmstripDivider  = document.getElementById('filmstrip-divider');
+const captionModal      = document.getElementById('caption-modal');
+const exportCoverJpgCheck = document.getElementById('export-cover-jpg');
+const captionTextInput  = document.getElementById('caption-text-input');
 
 // Height (mm) reserved at the top of the cover page for the album title
 // Must match COVER_TITLE_H_MM in layout.py
@@ -137,6 +148,7 @@ albumSelect.addEventListener('change', async () => {
   state.deleted_photos = [];
   state.locked_overrides = {};
   state.size_overrides = {};
+  state.captions = {};
   state.selected_photos = [];
   state.cover = { photo_id: null, title: name };
   updateSelectionToolbar();
@@ -168,6 +180,9 @@ albumSelect.addEventListener('change', async () => {
   }
   if (session.size_overrides) {
     state.size_overrides = { ...session.size_overrides };
+  }
+  if (session.captions) {
+    state.captions = { ...session.captions };
   }
   if (session.cover && session.cover.photo_id) {
     state.cover = { ...session.cover };
@@ -221,6 +236,19 @@ pageFormatSel.addEventListener('change', () => {
 
 btnSave.addEventListener('click', saveSession);
 btnExport.addEventListener('click', exportPdf);
+
+if (watermarkInput) {
+  watermarkInput.addEventListener('input', () => {
+    state.config.watermark_text = watermarkInput.value;
+    updateWatermarkOverlays();
+  });
+}
+
+if (targetDpiSel) {
+  targetDpiSel.addEventListener('change', () => {
+    state.config.target_dpi = parseInt(targetDpiSel.value, 10);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Zoom controls
@@ -295,6 +323,8 @@ function syncConfigUI() {
   const trh = state.config.target_row_height_mm ?? 60;
   targetRowHeightInput.value = trh;
   targetRowHeightVal.textContent = `${trh} mm`;
+  if (watermarkInput) watermarkInput.value = state.config.watermark_text || '';
+  if (targetDpiSel) targetDpiSel.value = String(state.config.target_dpi ?? 300);
 }
 
 function updatePageDimensions() {
@@ -450,6 +480,8 @@ function renderCanvas() {
     pagesContainer.appendChild(pageEl);
   }
 
+  updateWatermarkOverlays();
+  renderFilmstrip();
   attachInteractions();
 }
 
@@ -540,6 +572,26 @@ function createPhotoSlot(placement, thumbUrl, sc) {
   const handle = document.createElement('div');
   handle.className = 'resize-handle se';
   slot.appendChild(handle);
+
+  // Caption button — opens modal to edit caption
+  const captionBtn = document.createElement('button');
+  captionBtn.className = 'caption-btn';
+  captionBtn.title = 'Légende';
+  captionBtn.textContent = '✏️';
+  captionBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openCaptionModal(placement.photo_id);
+  });
+  slot.appendChild(captionBtn);
+
+  // Caption overlay (shown when a caption is set)
+  if (state.captions[placement.photo_id]) {
+    slot.classList.add('has-caption');
+    const capOverlay = document.createElement('div');
+    capOverlay.className = 'caption-overlay';
+    capOverlay.textContent = state.captions[placement.photo_id];
+    slot.appendChild(capOverlay);
+  }
 
   return slot;
 }
@@ -872,6 +924,7 @@ async function saveSession() {
     config: { ...state.config },
     cover: { ...state.cover },
     size_overrides: { ...state.size_overrides },
+    captions: { ...state.captions },
     photos: state.photos.map((p, i) => ({
       id: p.id,
       manual_order: i,
@@ -904,10 +957,12 @@ async function exportPdf() {
         page_count: state.page_count,
       },
       jpeg_quality: 85,
-      target_dpi: 150,
+      target_dpi: state.config.target_dpi ?? 300,
       cover_title: state.cover.photo_id
         ? (state.cover.title || state.album || '')
         : null,
+      watermark_text: state.config.watermark_text || null,
+      captions: { ...state.captions },
     };
     const res = await fetch('/api/export/pdf', {
       method: 'POST',
@@ -922,10 +977,218 @@ async function exportPdf() {
     a.download = `${state.album}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
+
+    // Optional: cover photo as JPG
+    if (exportCoverJpgCheck?.checked && state.cover.photo_id) {
+      const params = new URLSearchParams({
+        album_name: state.album,
+        photo_id: state.cover.photo_id,
+      });
+      const jpgRes = await fetch(`/api/export/cover-jpg?${params}`);
+      if (jpgRes.ok) {
+        const jpgBlob = await jpgRes.blob();
+        const jpgUrl  = URL.createObjectURL(jpgBlob);
+        const jpgA    = document.createElement('a');
+        jpgA.href     = jpgUrl;
+        jpgA.download = `${state.album}.jpg`;
+        jpgA.click();
+        URL.revokeObjectURL(jpgUrl);
+      }
+    }
   } finally {
     hideSpinner();
   }
 }
+
+// ---------------------------------------------------------------------------
+// Caption modal
+// ---------------------------------------------------------------------------
+
+function openCaptionModal(photoId) {
+  if (!captionModal || !captionTextInput) return;
+  captionTextInput.value = state.captions[photoId] || '';
+  captionModal.dataset.photoId = photoId;
+  captionModal.style.display = 'flex';
+  captionTextInput.focus();
+  captionTextInput.select();
+}
+
+if (captionModal) {
+  captionTextInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('caption-modal-ok').click();
+    if (e.key === 'Escape') document.getElementById('caption-modal-cancel').click();
+  });
+
+  document.getElementById('caption-modal-ok').addEventListener('click', () => {
+    const photoId = captionModal.dataset.photoId;
+    const text = captionTextInput.value.trim();
+    if (text) {
+      state.captions[photoId] = text;
+    } else {
+      delete state.captions[photoId];
+    }
+    captionModal.style.display = 'none';
+    renderCanvas();
+  });
+
+  document.getElementById('caption-modal-cancel').addEventListener('click', () => {
+    captionModal.style.display = 'none';
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Watermark overlay (preview)
+// ---------------------------------------------------------------------------
+
+function updateWatermarkOverlays() {
+  const text = state.config.watermark_text;
+  document.querySelectorAll('.page').forEach(pageEl => {
+    let el = pageEl.querySelector('.watermark-overlay');
+    if (!text) {
+      if (el) el.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'watermark-overlay';
+      pageEl.appendChild(el);
+    }
+    el.textContent = text;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Filmstrip (PHO-072)
+// ---------------------------------------------------------------------------
+
+function renderFilmstrip() {
+  if (!filmstripEl) return;
+  if (!state.album) {
+    filmstripEl.style.display = 'none';
+    if (filmstripDivider) filmstripDivider.style.display = 'none';
+    return;
+  }
+
+  const activePhotos = state.photos.filter(
+    p => !state.deleted_photos.find(d => d.id === p.id)
+  );
+  if (activePhotos.length === 0) {
+    filmstripEl.style.display = 'none';
+    if (filmstripDivider) filmstripDivider.style.display = 'none';
+    return;
+  }
+
+  const displayOrder = sortPhotos(activePhotos, state.config.sort_order);
+  filmstripEl.style.display = 'flex';
+  if (filmstripDivider) filmstripDivider.style.display = '';
+  filmstripEl.innerHTML = '';
+
+  displayOrder.forEach((photo, idx) => {
+    const item = document.createElement('div');
+    item.className = 'filmstrip-item';
+    item.draggable = true;
+    item.dataset.photoId = photo.id;
+    item.dataset.index = idx;
+    item.title = photo.id;
+
+    const img = document.createElement('img');
+    img.src = photo.thumb_url;
+    img.alt = photo.id;
+    item.appendChild(img);
+
+    // Delete button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'filmstrip-delete-btn';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Supprimer de la mise en page';
+    delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      await deletePhoto(photo.id);
+    });
+    item.appendChild(delBtn);
+
+    if (state.captions[photo.id]) {
+      const dot = document.createElement('div');
+      dot.className = 'filmstrip-caption-dot';
+      item.appendChild(dot);
+    }
+
+    item.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', String(idx));
+      item.classList.add('dragging');
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      filmstripEl.querySelectorAll('.filmstrip-item').forEach(i => i.classList.remove('drag-over'));
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      item.classList.add('drag-over');
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      const toIdx = parseInt(item.dataset.index, 10);
+      if (fromIdx === toIdx || isNaN(fromIdx) || isNaN(toIdx)) return;
+
+      // Reorder active photos and rebuild state.photos
+      const reordered = sortPhotos(
+        state.photos.filter(p => !state.deleted_photos.find(d => d.id === p.id)),
+        state.config.sort_order
+      );
+      const [moved] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, moved);
+
+      const deletedIds = new Set(state.deleted_photos.map(p => p.id));
+      state.photos = [...reordered, ...state.photos.filter(p => deletedIds.has(p.id))];
+
+      state.config.sort_order = 'manual';
+      if (sortOrderSel) sortOrderSel.value = 'manual';
+
+      await computeLayout();
+    });
+
+    filmstripEl.appendChild(item);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Filmstrip divider resize
+// ---------------------------------------------------------------------------
+
+(function initDividerResize() {
+  if (!filmstripDivider || !filmstripEl) return;
+  let startX, startW;
+  filmstripDivider.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    startW = filmstripEl.offsetWidth;
+    filmstripDivider.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (startX === undefined) return;
+    const delta = startX - e.clientX;
+    const newW = Math.max(60, Math.min(400, startW + delta));
+    filmstripEl.style.width = `${newW}px`;
+  });
+  document.addEventListener('mouseup', () => {
+    if (startX === undefined) return;
+    startX = undefined;
+    filmstripDivider.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+}());
 
 // ---------------------------------------------------------------------------
 // Start

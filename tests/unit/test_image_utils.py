@@ -61,6 +61,25 @@ class TestScanAlbum:
         assert ids == sorted(ids)
 
 
+class TestSupportedExtensions:
+    def test_heic_in_supported_extensions_when_pillow_heif_available(self) -> None:
+        """HEIC extension is supported when pillow-heif is installed."""
+        from pholio.image_utils import _HEIF_AVAILABLE, SUPPORTED_EXTENSIONS
+
+        if _HEIF_AVAILABLE:
+            assert ".heic" in SUPPORTED_EXTENSIONS
+            assert ".heif" in SUPPORTED_EXTENSIONS
+        else:
+            # pillow-heif not installed: extensions not added to avoid false positives
+            assert ".heic" not in SUPPORTED_EXTENSIONS
+
+    def test_base_formats_always_supported(self) -> None:
+        from pholio.image_utils import SUPPORTED_EXTENSIONS
+
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            assert ext in SUPPORTED_EXTENSIONS
+
+
 class TestThumbnail:
     def test_creates_thumbnail(
         self, test_album_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
