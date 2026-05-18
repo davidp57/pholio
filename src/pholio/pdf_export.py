@@ -11,6 +11,32 @@ from PIL import Image, ImageOps
 from pholio.layout import LayoutResult
 
 
+class _AlbumPDF(FPDF):
+    """FPDF subclass that renders an optional footer on every page via the
+    official ``footer()`` hook — called automatically by fpdf2 for each page."""
+
+    def __init__(
+        self,
+        watermark: str = "",
+        unit: str = "mm",
+        format: str | tuple[float, float] = "A4",
+    ) -> None:
+        super().__init__(unit=unit, format=format)
+        self._watermark = watermark
+
+    def footer(self) -> None:
+        if not self._watermark:
+            return
+        self.set_font("Helvetica", "I", 9)
+        self.set_text_color(170, 170, 170)
+        wm_w = self.get_string_width(self._watermark)
+        x = self.w - wm_w - 4
+        # y = top of text baseline; 9 pt ≈ 3.2 mm, keep 3 mm clearance
+        y = self.h - 6.5
+        self.text(x, y, self._watermark)
+        self.set_text_color(0, 0, 0)
+
+
 def _crop_to_aspect(img: Image.Image, target_w_mm: float, target_h_mm: float) -> Image.Image:
     """Centered crop to match the target aspect ratio (like CSS object-fit: cover)."""
     target_aspect = target_w_mm / target_h_mm
@@ -58,7 +84,7 @@ def generate_pdf(
     Returns:
         PDF file content as bytes.
     """
-    pdf = FPDF(unit="mm", format=(page_w_mm, page_h_mm))
+    pdf = _AlbumPDF(watermark=watermark_text or "", unit="mm", format=(page_w_mm, page_h_mm))
     pdf.set_auto_page_break(auto=False)
 
     # Create pages
@@ -137,20 +163,5 @@ def generate_pdf(
         pdf.set_text_color(255, 255, 255)
         pdf.set_xy(0.0, 2.0)
         pdf.cell(page_w_mm, title_h - 4.0, cover_title, align="C")
-
-    # Render watermark on every page (bottom-right, light gray italic)
-    # set_font / set_text_color must be re-issued after each pdf.page switch so
-    # fpdf2 emits the correct commands into each page's content stream.
-    if watermark_text:
-        for pg in range(1, layout_result.page_count + 1):
-            pdf.page = pg
-            pdf.set_font("Helvetica", "I", 9)
-            pdf.set_text_color(170, 170, 170)
-            wm_w = pdf.get_string_width(watermark_text)
-            x = page_w_mm - wm_w - 4
-            # y = top of text line; font is ~3.2 mm tall, keep 3 mm clearance
-            y = page_h_mm - 6.5
-            pdf.text(x, y, watermark_text)
-        pdf.set_text_color(0, 0, 0)
 
     return bytes(pdf.output())
