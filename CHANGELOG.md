@@ -6,6 +6,14 @@ Versionnage : [Semantic Versioning](https://semver.org/)
 
 ---
 
+## [1.0.1] — 2026-05-18
+
+### Corrigé
+
+- Crash de l'exe au chargement des photos (`ValueError: is not in the subpath of`) — chemin de miniature relatif non résolu avant `relative_to()` dans `main.py`
+
+---
+
 ## [1.0.0] — 2026-05-17
 
 Première version stable. L'application est complète et utilisable de bout en bout.
