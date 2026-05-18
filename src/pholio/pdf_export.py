@@ -53,9 +53,11 @@ def _hex_to_rgb(color: str) -> tuple[int, int, int]:
 
     Returns (0, 0, 0) for any malformed input as a safe fallback.
     """
-    c = color.lstrip("#")
+    if len(color) != 7 or color[0] != "#":
+        return (0, 0, 0)
+    c = color[1:]
     try:
-        return int(c[:2], 16), int(c[2:4], 16), int(c[4:], 16)
+        return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
     except ValueError:
         return (0, 0, 0)
 
@@ -183,7 +185,7 @@ def generate_pdf(
     pdf = _AlbumPDF(
         watermark=watermark_text or "",
         page_bg=_hex_to_rgb(page_bg_color),
-        cover_bg=_hex_to_rgb(cover_bg_color) if cover_bg_color else None,
+        cover_bg=_hex_to_rgb(cover_bg_color) if (cover_bg_color and cover_photo_id) else None,
         unit="mm",
         format=(page_w_mm, page_h_mm),
     )

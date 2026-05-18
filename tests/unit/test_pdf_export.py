@@ -170,13 +170,15 @@ class TestGeneratePdf:
             result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, page_bg_color="#ffffff"
         )
         assert pdf_colored[:4] == b"%PDF"
-        # A non-white background must produce different PDF content than white
+        # fpdf2 is deterministic: the only variable between the two calls is the fill
+        # colour, so any difference in bytes proves the colour was applied.
         assert pdf_colored != pdf_default
 
     def test_cover_bg_color_different_from_pages(self, tmp_path: Path) -> None:
         from pholio.pdf_export import generate_pdf
 
         result = LayoutResult(placements=[], page_count=3)
+        # cover_bg_color only takes effect when cover_photo_id is also set
         pdf_with_cover = generate_pdf(
             result,
             tmp_path,
@@ -184,12 +186,14 @@ class TestGeneratePdf:
             page_h_mm=297.0,
             page_bg_color="#ffffff",
             cover_bg_color="#111111",
+            cover_photo_id="__nonexistent__",
         )
         pdf_uniform = generate_pdf(
             result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, page_bg_color="#ffffff"
         )
         assert pdf_with_cover[:4] == b"%PDF"
-        # A distinct cover colour must change the PDF content
+        # fpdf2 is deterministic: a distinct cover colour changes the fill command on
+        # page 0, which must propagate to different byte content.
         assert pdf_with_cover != pdf_uniform
 
     def test_cover_photo_id_contain_no_crop(self, tmp_path: Path) -> None:
@@ -214,6 +218,30 @@ class TestGeneratePdf:
         assert img_h == pytest.approx(140.0, rel=1e-3)
         assert x_off == pytest.approx(0.0, abs=1e-3)
         assert y_off == pytest.approx(78.5, rel=1e-2)
+
+    def test_non_cover_still_uses_cropped_mode(self, tmp_path: Path) -> None:
+        """Non-cover photos must use crop mode — contain must not leak outside page 0."""
+        from pholio.pdf_export import generate_pdf
+
+        # Same 3:2 landscape image in a portrait slot — aspect mismatch forces crop vs contain
+        img = Image.new("RGB", (600, 400), color=(80, 120, 160))
+        img.save(tmp_path / "PHOTO.jpg", format="JPEG")
+        placement = PhotoPlacement(
+            photo_id="PHOTO.jpg", page=0, x_mm=0.0, y_mm=0.0, w_mm=210.0, h_mm=297.0
+        )
+        result = LayoutResult(placements=[placement], page_count=1)
+
+        # Cover mode: contain (no crop)
+        pdf_cover = generate_pdf(
+            result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, cover_photo_id="PHOTO.jpg"
+        )
+        # Non-cover mode: legacy crop-to-aspect
+        pdf_nocov = generate_pdf(
+            result, tmp_path, page_w_mm=210.0, page_h_mm=297.0, cover_photo_id=None
+        )
+        assert pdf_nocov[:4] == b"%PDF"
+        # Contain vs crop produces different image placement commands → different bytes
+        assert pdf_cover != pdf_nocov
 
     def test_text_blocks_in_pdf(self, tmp_path: Path) -> None:
         from pholio.pdf_export import generate_pdf

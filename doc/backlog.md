@@ -49,7 +49,7 @@ Améliorations visuelles, mise en page avancée et interactivité.
 
 | Ticket | Titre | Priorité | Statut | Estimé | Réel |
 |---|---|---|---|---|---|
-| PHO-080 | Couleur de fond des pages (sélecteur, appliqué dans PDF) | P2 | ✅ Fait | 35 min | — |
+| PHO-080 | Couleur de fond des pages (sélecteur, appliquée dans le PDF) | P2 | ✅ Fait | 35 min | — |
 | PHO-081 | Couleur de fond différente sur la page de garde | P3 | ✅ Fait | 20 min | — |
 | PHO-082 | Placement libre de la photo de garde (sans recadrage forcé) | P2 | ✅ Fait | 45 min | — |
 | PHO-083 | Icônes filmstrip : lock position, lock taille, choisir comme garde (toujours visibles) | P2 | ✅ Fait | 40 min | — |

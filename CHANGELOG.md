@@ -14,7 +14,7 @@ Versionnage : [Semantic Versioning](https://semver.org/)
 
 ### Ajouté
 
-- **Couleur de fond des pages** (PHO-080) : sélecteur de couleur dans la barre latérale ; appliqué en fond à chaque page dans le PDF
+- **Couleur de fond des pages** (PHO-080) : sélecteur de couleur dans la barre latérale ; appliquée en fond à chaque page dans le PDF
 - **Couleur de fond de la page de garde** (PHO-081) : couleur distincte optionnelle pour la page de garde, indépendante des autres pages
 - **Photo de garde sans recadrage** (PHO-082) : mode « contain » pour la photo de garde — la photo est redimensionnée pour tenir entière dans la page sans être rognée, centrée avec des bandes de fond
 - **Icônes filmstrip améliorées** (PHO-083) : icônes toujours visibles sur chaque vignette du filmstrip — verrouillage de position, verrouillage de taille, définir comme page de garde
