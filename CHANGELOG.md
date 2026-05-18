@@ -10,6 +10,14 @@ Versionnage : [Semantic Versioning](https://semver.org/)
 
 ---
 
+## [1.2.1] — 2026-05-18
+
+### Amélioré
+
+- **Persistance de session complète** : les photos écartées, le niveau de zoom du canvas et la largeur du filmstrip sont désormais sauvegardés et restaurés à la réouverture d’un album
+
+---
+
 ## [1.2.0] — 2026-05-18
 
 ### Ajouté
