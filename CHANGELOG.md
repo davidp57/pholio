@@ -14,6 +14,7 @@ Versionnage : [Semantic Versioning](https://semver.org/)
 - **Légendes** (PHO-071) : bouton ✏️ sur chaque photo pour saisir une légende ; affichée en superposition dans le canvas et rendue comme bande sombre en bas de la photo dans le PDF ; persistée dans la session
 - **Panneau filmstrip** (PHO-072) : bande horizontale en bas du canvas affichant toutes les photos actives ; drag & drop pour réorganiser l'ordre ; bascule automatique en mode « Manuel »
 - **Support HEIC/HEIF** (PHO-073) : ouverture des fichiers `.heic` et `.heif` via `pillow-heif` lorsque la bibliothèque est installée
+- **Résolution PDF** : sélecteur DPI dans la barre latérale (72 / 100 / **150** / 200 / 300) ; valeur persistée en session
 
 ---
 
